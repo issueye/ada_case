@@ -29,7 +29,6 @@ func (a *App) columnTabs(c *ui.Context, idx int) {
 				})
 			})
 		}
-		a.runTabMenuAction()
 		ui.Box(c).Width(1).Height(theme.TabStripH).Background(theme.BorderSoft)
 		ui.Row(c).PaddingX(6).Gap(2).AlignItems(ui.Center).Children(func() {
 			split := ui.ButtonBase(c).Size(26, 24).Radius(4).Label("拆分编辑器").Tooltip(a.splitHint()).
@@ -85,7 +84,14 @@ func (a *App) tab(c *ui.Context, idx, i int, e *document.Editor, chosen bool) {
 		a.ActiveCol = idx
 		a.Cols[idx].Active = i
 	})
-	tab.ContextMenu(func(m *ui.Menu) { a.tabMenu(m, idx, e.Doc) })
+	if tab.RightClicked() {
+		a.tabMenu = tabMenuState{open: true, idx: idx, doc: e.Doc}
+	}
+	if a.tabMenu.open && a.tabMenu.idx == idx && a.tabMenu.doc == e.Doc {
+		ui.Popover(c, tab, &a.tabMenu.open, func() {
+			a.tabMenuBody(c, idx, e.Doc)
+		})
+	}
 }
 
 // closeTabIn closes d in column idx, asking to save it first when dirty,
@@ -210,54 +216,49 @@ func (a *App) emptyColumn(c *ui.Context, col *document.Column) {
 	})
 }
 
-// tabAction is a tab menu's choice, run after the rows were built.
-type tabAction struct {
-	kind string
+// tabMenuState is the tab menu that a right click opened: which tab, the
+// document, and whether it still shows.
+type tabMenuState struct {
+	open bool
 	idx  int
 	doc  *document.Document
 }
 
-// tabMenu adds the tab actions to a tab's context menu.
-func (a *App) tabMenu(m *ui.Menu, idx int, d *document.Document) {
-	if m.Item("关闭").Shortcut(ui.Cmd, ui.KeyW).Chosen() {
-		a.tabMenuAct = &tabAction{kind: "close", idx: idx, doc: d}
-	}
-	if m.Item("关闭其他").Chosen() {
-		a.tabMenuAct = &tabAction{kind: "closeOthers", idx: idx, doc: d}
-	}
-	if m.Item("关闭已保存").Chosen() {
-		a.tabMenuAct = &tabAction{kind: "closeSaved", idx: idx, doc: d}
-	}
-	m.Separator()
-	if m.Item("复制路径").Chosen() {
-		a.tabMenuAct = &tabAction{kind: "copyPath", idx: idx, doc: d}
-	}
-	if m.Item("在文件管理器中显示").Chosen() {
-		a.tabMenuAct = &tabAction{kind: "reveal", idx: idx, doc: d}
-	}
-}
-
-// runTabMenuAction runs the tab menu's choice after the rows are built,
-// so an action that closes tabs does not change the slice under the loop.
-func (a *App) runTabMenuAction() {
-	act := a.tabMenuAct
-	a.tabMenuAct = nil
-	if act == nil {
-		return
-	}
-	switch act.kind {
-	case "close":
-		a.closeTabIn(act.idx, act.doc)
-	case "closeOthers":
-		a.closeOthersIn(act.idx, act.doc)
-	case "closeSaved":
-		a.closeSavedIn(act.idx)
-	case "copyPath":
-		mygo.Clipboard.WriteText(act.doc.Path)
-		a.say("已复制路径 " + act.doc.Path)
-	case "reveal":
-		mygo.Shell.ShowItemInFolder(act.doc.Path)
-	}
+// tabMenuBody draws the tab's menu in the app's own style, in a popover
+// under the tab, rather than the system's white menu.
+func (a *App) tabMenuBody(c *ui.Context, idx int, d *document.Document) {
+	ui.Column(c).Width(216).PaddingY(4).Radius(6).Background(theme.Panel).
+		Border(1, theme.Border).Shadow(0, 8, 24, 0, ui.RGBA(0, 0, 0, 0.45)).
+		Children(func() {
+			item := func(label, hint string, run func()) {
+				row := ui.Row(c).Height(28).PaddingX(10).Gap(8).AlignItems(ui.Center).
+					Cursor(ui.CursorPointer)
+				row.Children(func() {
+					ui.Text(c, label).FontSize(11).TextColor(theme.Text).Grow(1).SingleLine()
+					if hint != "" {
+						ui.Text(c, hint).FontSize(9).TextColor(theme.Faint)
+					}
+				})
+				if row.Hovered() {
+					row.Background(theme.Hover)
+				}
+				row.OnClick(func() {
+					a.tabMenu.open = false
+					run()
+				})
+			}
+			item("关闭", "Ctrl+W", func() { a.closeTabIn(idx, d) })
+			item("关闭其他", "", func() { a.closeOthersIn(idx, d) })
+			item("关闭已保存", "", func() { a.closeSavedIn(idx) })
+			ui.Box(c).Height(1).Background(theme.BorderSoft)
+			item("复制路径", "", func() {
+				mygo.Clipboard.WriteText(d.Path)
+				a.say("已复制路径 " + d.Path)
+			})
+			item("在文件管理器中显示", "", func() {
+				mygo.Shell.ShowItemInFolder(d.Path)
+			})
+		})
 }
 
 // closeOthersIn closes the clean tabs of a column except d.

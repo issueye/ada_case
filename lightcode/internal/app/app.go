@@ -98,8 +98,8 @@ type App struct {
 	viewW, viewH float32
 	// aiDrag is a pointer drag of the floating assistant.
 	aiDrag aiDragState
-	// tabMenuAct is a tab context menu''s choice, run after the rows are built.
-	tabMenuAct *tabAction
+	// tabMenu is the tab menu a right click opened.
+	tabMenu tabMenuState
 	// Prefs are the app's preferences, from settings.json.
 	Prefs preferences
 	// Capability toggles in the extensions view.

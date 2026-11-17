@@ -43,15 +43,23 @@ func (a *App) aiFloat(c *ui.Context) {
 	})
 }
 
-// aiHeader is the title row: the modes, the settings and the collapse.
+// aiHeader is the title row: the drag grip, the modes, the settings and
+// the collapse.
 func (a *App) aiHeader(c *ui.Context) {
 	ui.Row(c).Height(theme.PanelHeadH).PaddingX(10).Gap(6).AlignItems(ui.Center).Children(func() {
-		ui.Icon(c, icons.Sparkles).FontSize(15).TextColor(theme.AI)
-		ui.Text(c, "AI 助手").FontSize(11).Bold().TextColor(theme.Text)
-		if a.AI.Streaming {
-			ui.Text(c, "生成中").FontSize(9).TextColor(theme.AI).Padding(1, 5).
-				Radius(3).Background(theme.AISoft)
-		}
+		grip := ui.Row(c).Gap(6).AlignItems(ui.Center).Cursor(ui.CursorGrab).
+			Tooltip("拖动可移动 AI 面板")
+		// Only the title drags: the buttons to its right take their own
+		// presses, which a root handler would swallow.
+		grip.HandleInput(a.dragAI(0))
+		grip.Children(func() {
+			ui.Icon(c, icons.Sparkles).FontSize(15).TextColor(theme.AI)
+			ui.Text(c, "AI 助手").FontSize(11).Bold().TextColor(theme.Text)
+			if a.AI.Streaming {
+				ui.Text(c, "生成中").FontSize(9).TextColor(theme.AI).Padding(1, 5).
+					Radius(3).Background(theme.AISoft)
+			}
+		})
 		ui.Box(c).Grow(1)
 		ui.Segmented(c, &a.AI.Mode, "停靠", "悬浮", "收起").FontSize(9).
 			OnChange(func() { a.SaveState() })
@@ -329,10 +337,12 @@ func (a *App) aiRail(c *ui.Context) {
 		card := ui.Column(c).Absolute().Left(x).Top(y).Width(48).Height(172).
 			Radius(10).Background(theme.Panel).Border(1, theme.Border).
 			Shadow(0, 12, 30, 0, ui.RGBA(0, 0, 0, 0.5)).
-			AlignItems(ui.Center).PaddingY(8).Gap(6).Cursor(ui.CursorGrab)
-		card.HandleInput(a.dragAI(1))
+			AlignItems(ui.Center).PaddingY(8).Gap(6)
 		card.Children(func() {
-			ui.Icon(c, icons.Sparkles).FontSize(20).TextColor(theme.AI).Tooltip("AI 助手（已收起）")
+			grip := ui.Box(c).Size(32, 32).Center().Cursor(ui.CursorGrab).
+				Tooltip("AI 助手（已收起）；拖动可移动")
+			grip.HandleInput(a.dragAI(1))
+			grip.Children(func() { ui.Icon(c, icons.Sparkles).FontSize(20).TextColor(theme.AI) })
 			ui.Box(c).Width(24).Height(1).Background(theme.BorderSoft)
 			expand := ui.ButtonBase(c).Size(32, 32).Radius(6).Label("展开 AI 面板").Tooltip("展开 AI 助手").
 				Children(func() { ui.Icon(c, icons.PanelRight).FontSize(15).TextColor(theme.Muted) })

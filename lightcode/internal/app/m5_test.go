@@ -151,7 +151,7 @@ func TestCloseOthersAndSaved(t *testing.T) {
 	}
 }
 
-// TestTabContextMenu right-clicks a tab and finds its actions.
+// TestTabContextMenu right-clicks a tab and finds its themed menu.
 func TestTabContextMenu(t *testing.T) {
 	a, dir := testWorkspace(t)
 	a.resetColumns()
@@ -159,19 +159,27 @@ func TestTabContextMenu(t *testing.T) {
 	a.OpenFile(filepath.Join(dir, "pkg", "util.go"))
 	tt := ui.NewTester(a.View, 1280, 820)
 	tt.RightClickAt(340, 64)
-	items := tt.Menu()
-	want := map[string]bool{"关闭": false, "关闭其他": false, "关闭已保存": false, "复制路径": false, "在文件管理器中显示": false}
-	for _, it := range items {
-		if _, ok := want[it]; ok {
-			want[it] = true
+	tt.Frame()
+	for _, want := range []string{"关闭", "关闭其他", "关闭已保存", "复制路径", "在文件管理器中显示"} {
+		if !tt.HasText(want) {
+			t.Errorf("themed tab menu misses %q; texts %q", want, tt.Texts())
 		}
 	}
-	for name, seen := range want {
-		if !seen {
-			t.Errorf("tab menu misses %q; menu %q", name, items)
-		}
+}
+
+// TestAIRailExpandsOnClick expands the floating panel from the collapsed
+// card; the drag grip must not swallow the button's click.
+func TestAIRailExpandsOnClick(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.AI.Mode = AIRail
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.Frame()
+	if err := tt.Click("展开 AI 面板"); err != nil {
+		t.Fatal(err)
 	}
-	tt.CloseMenu()
+	if a.AI.Mode != AIDock {
+		t.Errorf("the rail did not expand; mode %d", a.AI.Mode)
+	}
 }
 
 // TestAIDragFloatingAndRail drags the floating panel and the collapsed
@@ -193,7 +201,7 @@ func TestAIDragFloatingAndRail(t *testing.T) {
 	a.AI.Mode = AIRail
 	tt.Frame()
 	rx0 := a.Prefs.AIRailX
-	tt.Press(1240, 360)
+	tt.Press(a.Prefs.AIRailX+24, a.Prefs.AIRailY+16)
 	tt.Move(1120, 300)
 	tt.Release(1120, 300)
 	tt.Frame()
