@@ -1,9 +1,6 @@
 package app
 
 import (
-	"time"
-	"unicode/utf8"
-
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/markdown"
@@ -32,9 +29,8 @@ func (a *App) aiFloat(c *ui.Context) {
 	ui.Overlay(c, func() {
 		card := ui.Column(c).Absolute().Left(x).Top(y).Width(380).Height(640).
 			Radius(10).Background(theme.Panel).Border(1, theme.Border).
-			Shadow(0, 16, 40, 0, ui.RGBA(0, 0, 0, 0.55)).
-			Cursor(ui.CursorGrab)
-		card.HandleInput(a.dragAIHeader(0))
+			Shadow(0, 16, 40, 0, ui.RGBA(0, 0, 0, 0.55))
+		card.HandleInput(a.dragAIHeader(0, x, y))
 		card.Children(func() {
 			a.aiHeader(c)
 			a.aiBody(c)
@@ -96,23 +92,17 @@ func (a *App) aiBody(c *ui.Context) {
 				a.aiIntro(c)
 				return
 			}
-			pending := false
 			for i := range a.AI.Messages {
 				m := &a.AI.Messages[i]
 				if m.Role == "user" {
 					a.aiUserMessage(c, m.Content)
 					continue
 				}
-				if a.revealAI(m) {
-					pending = true
-				}
 				a.aiAnswer(c, m)
 			}
-			if a.AI.Streaming || pending {
+			if a.AI.Streaming || a.AI.RevealPending {
+				// Keep the end of the answer in view while it grows.
 				ui.Box(c).Height(1).ScrollIntoView()
-			}
-			if pending {
-				c.After(16 * time.Millisecond)
 			}
 		})
 	})
@@ -163,35 +153,6 @@ func (a *App) lastAnswerExcerpt() string {
 		return string(r)
 	}
 	return ""
-}
-
-// revealAI shows a few more runes of the answer, as a typewriter: the
-// network may deliver a whole reply at once, the view still types it.
-// It reports whether more is left to show.
-func (a *App) revealAI(m *aiMessage) bool {
-	if m.Full == "" || m.Full == m.Content {
-		if m.Full != "" {
-			m.Content = m.Full
-		}
-		return false
-	}
-	runes := []rune(m.Full)
-	shown := utf8.RuneCountInString(m.Content)
-	if shown >= len(runes) {
-		m.Content = m.Full
-		return false
-	}
-	remaining := len(runes) - shown
-	step := 2
-	if !a.AI.Streaming || remaining > 300 {
-		step = remaining/40 + 2
-	}
-	next := shown + step
-	if next > len(runes) {
-		next = len(runes)
-	}
-	m.Content = string(runes[:next])
-	return next < len(runes)
 }
 
 // aiIntro is what the panel shows before the first question.
@@ -360,7 +321,7 @@ func (a *App) aiRail(c *ui.Context) {
 		card.Children(func() {
 			grip := ui.Box(c).Size(32, 32).Center().Cursor(ui.CursorGrab).
 				Tooltip("AI 助手（已收起）；拖动可移动")
-			grip.HandleInput(a.dragAI(1))
+			grip.HandleInput(a.dragAI(1, x, y))
 			grip.Children(func() { ui.Icon(c, icons.Sparkles).FontSize(20).TextColor(theme.AI) })
 			ui.Box(c).Width(24).Height(1).Background(theme.BorderSoft)
 			expand := ui.ButtonBase(c).Size(32, 32).Radius(6).Label("展开 AI 面板").Tooltip("展开 AI 助手").
@@ -389,10 +350,10 @@ func (a *App) aiRail(c *ui.Context) {
 type aiDragState struct {
 	active bool
 	target int
-	lastX  float32
-	lastY  float32
-	movedX float32
-	movedY float32
+	// grabX and grabY are where the pointer took hold of the panel, from
+	// its top left; the panel keeps that point under the pointer.
+	grabX float32
+	grabY float32
 }
 
 // aiPosition returns the top-left of the floating panel (target 0) or the
@@ -457,9 +418,17 @@ func (a *App) clampAI(x, y, w, h float32) (float32, float32) {
 
 // dragAI drags the floating panel (target 0) or the rail card (1) by the
 // pointer; buttons inside them take their own presses first.
-func (a *App) dragAI(target int) func(ui.InputEvent) bool {
+//
+// ox and oy are the origin the panel was built at: the event's X and Y are
+// local to the panel, which itself moves as the drag goes, so a local
+// coordinate stops telling how far the pointer went once the panel follows
+// it. ox+ev.X is the pointer's place in the window, which the panel's
+// movement does not change, so the panel goes where the pointer holds it,
+// once a frame, however many moves came.
+func (a *App) dragAI(target int, ox, oy float32) func(ui.InputEvent) bool {
 	return func(ev ui.InputEvent) bool {
 		st := &a.aiDrag
+		wx, wy := ox+ev.X, oy+ev.Y
 		switch ev.Kind {
 		case ui.InputPointerDown:
 			if ev.Button != 0 {
@@ -467,18 +436,13 @@ func (a *App) dragAI(target int) func(ui.InputEvent) bool {
 			}
 			st.active = true
 			st.target = target
-			st.lastX, st.lastY = ev.X, ev.Y
-			st.movedX, st.movedY = 0, 0
+			st.grabX, st.grabY = wx-a.panelX(target), wy-a.panelY(target)
 			return true
 		case ui.InputPointerMove:
 			if !st.active || st.target != target {
 				return false
 			}
-			dx := ev.X - st.lastX + st.movedX
-			dy := ev.Y - st.lastY + st.movedY
-			ax, ay := a.moveAI(target, dx, dy)
-			st.movedX, st.movedY = ax, ay
-			st.lastX, st.lastY = ev.X, ev.Y
+			a.moveAI(target, wx-st.grabX, wy-st.grabY)
 			return true
 		case ui.InputPointerUp:
 			if !st.active {
@@ -492,27 +456,38 @@ func (a *App) dragAI(target int) func(ui.InputEvent) bool {
 	}
 }
 
-// moveAI moves a panel by dx, dy and reports how far it actually moved
-// after the window's edges clamped it.
-func (a *App) moveAI(target int, dx, dy float32) (float32, float32) {
-	w, h := float32(380), float32(640)
-	var x, y *float32
+// panelX and panelY are the top left of a panel, as it was last put.
+func (a *App) panelX(target int) float32 {
 	if target == 0 {
-		x, y = &a.Prefs.AIFloatX, &a.Prefs.AIFloatY
+		return a.Prefs.AIFloatX
+	}
+	return a.Prefs.AIRailX
+}
+
+func (a *App) panelY(target int) float32 {
+	if target == 0 {
+		return a.Prefs.AIFloatY
+	}
+	return a.Prefs.AIRailY
+}
+
+// moveAI puts a panel's top left at x, y, clamped to the window.
+func (a *App) moveAI(target int, x, y float32) {
+	w, h := float32(380), float32(640)
+	var px, py *float32
+	if target == 0 {
+		px, py = &a.Prefs.AIFloatX, &a.Prefs.AIFloatY
 	} else {
 		w, h = 48, 172
-		x, y = &a.Prefs.AIRailX, &a.Prefs.AIRailY
+		px, py = &a.Prefs.AIRailX, &a.Prefs.AIRailY
 	}
-	ox, oy := *x, *y
-	nx, ny := a.clampAI(ox+dx, oy+dy, w, h)
-	*x, *y = nx, ny
-	return nx - ox, ny - oy
+	*px, *py = a.clampAI(x, y, w, h)
 }
 
 // dragAIHeader starts a drag only from the header's grip, leaving the
 // controls to the right to their own clicks.
-func (a *App) dragAIHeader(target int) func(ui.InputEvent) bool {
-	inner := a.dragAI(target)
+func (a *App) dragAIHeader(target int, ox, oy float32) func(ui.InputEvent) bool {
+	inner := a.dragAI(target, ox, oy)
 	return func(ev ui.InputEvent) bool {
 		if ev.Kind == ui.InputPointerDown && (ev.X > 170 || ev.Y > 36) {
 			return false

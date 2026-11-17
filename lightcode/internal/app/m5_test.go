@@ -226,6 +226,28 @@ func TestAIDragFloatingAndRail(t *testing.T) {
 	}
 }
 
+// TestAIDragCountsMovesBetweenFrames keeps a drag true when the pointer
+// moves more than once between two frames, as a mouse moving faster than
+// the frames does: each move counts once, from where the pointer was, not
+// from where the panel was, which moves itself.
+func TestAIDragCountsMovesBetweenFrames(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.AI.Mode = AIFloat
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.Frame()
+	x0, y0 := a.Prefs.AIFloatX, a.Prefs.AIFloatY
+	drag := a.dragAI(0, x0, y0)
+	drag(ui.InputEvent{Kind: ui.InputPointerDown, X: 20, Y: 18})
+	// Two moves before the next frame: the pointer goes 20 DIPs left.
+	drag(ui.InputEvent{Kind: ui.InputPointerMove, X: 10, Y: 18})
+	drag(ui.InputEvent{Kind: ui.InputPointerMove, X: 0, Y: 18})
+	drag(ui.InputEvent{Kind: ui.InputPointerUp})
+	if a.Prefs.AIFloatX != x0-20 || a.Prefs.AIFloatY != y0 {
+		t.Errorf("two moves of 10 DIPs moved the panel %.0f, want 20; position %.0f,%.0f",
+			x0-a.Prefs.AIFloatX, a.Prefs.AIFloatX, a.Prefs.AIFloatY)
+	}
+}
+
 // TestAIFloatHeaderButtons clicks the floating panel's header controls,
 // which the drag area must leave alone.
 func TestAIFloatHeaderButtons(t *testing.T) {

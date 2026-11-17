@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
 	"lightcode/internal/document"
@@ -97,6 +98,8 @@ func (a *App) SaveState() {
 func (a *App) Start() {
 	a.SaveState()
 	a.startWatch()
+	// Checking the open files every 1.5 s asks for a frame only when one of
+	// them changed on disk: an idle window builds nothing.
 	go func() {
 		t := time.NewTicker(1500 * time.Millisecond)
 		defer t.Stop()
@@ -105,18 +108,39 @@ func (a *App) Start() {
 			if win == nil || win.IsDestroyed() {
 				return
 			}
-			win.Update(a.checkDisk)
+			changed := false
+			mygo.RunOnMain(func() { changed = a.checkDisk() })
+			if changed {
+				win.Invalidate()
+			}
+		}
+	}()
+	// The repository's status follows its own pace: a read every 5 s, on a
+	// goroutine, so the window never waits for git. The read asks for the
+	// frame that shows its result, not for one every tick.
+	go func() {
+		t := time.NewTicker(5 * time.Second)
+		defer t.Stop()
+		for range t.C {
+			win := a.Win
+			if win == nil || win.IsDestroyed() {
+				return
+			}
+			mygo.RunOnMain(a.refreshGit)
 		}
 	}()
 }
 
 // checkDisk runs on the main thread: it reloads clean documents whose
-// files changed, marks dirty ones, and pins edited preview tabs.
-func (a *App) checkDisk() {
+// files changed, marks dirty ones, and pins edited preview tabs. It reports
+// whether any document changed, so the caller asks for a frame only then.
+func (a *App) checkDisk() bool {
+	changed := false
 	for _, d := range a.Docs {
 		if !d.ChangedOnDisk() {
 			continue
 		}
+		changed = true
 		if d.Dirty() {
 			d.SetExternalChanged(true)
 			continue
@@ -126,10 +150,7 @@ func (a *App) checkDisk() {
 		}
 	}
 	a.syncPreviews()
-	a.gitTick++
-	if a.Repo != nil && a.gitTick%2 == 0 {
-		a.refreshGit()
-	}
+	return changed
 }
 
 // syncPreviews pins preview tabs whose text was edited.

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
@@ -67,6 +68,9 @@ type aiState struct {
 	// RailHover is whether the collapsed rail card is hovered, for its
 	// preview.
 	RailHover bool
+	// RevealPending is whether the answer still has runes to show, as the
+	// typewriter catches up with the text that arrived.
+	RevealPending bool
 
 	cancel context.CancelFunc
 	seq    uint64
@@ -117,7 +121,11 @@ func (a *App) NewAIChat() {
 	if a.AI.Streaming {
 		a.CancelAI()
 	}
+	// A stream still running belongs to the cleared conversation: its
+	// updates stop, as its reveal frames do.
+	a.AI.seq++
 	a.AI.Messages = nil
+	a.AI.RevealPending = false
 	a.AI.Err = ""
 }
 
@@ -179,7 +187,8 @@ func (a *App) SendAI() {
 	}
 	win := a.Win
 	// Deltas arrive far faster than frames: append them in batches, at
-	// most every 50 ms, and let the view catch up between them.
+	// most every 50 ms, and let the typewriter catch up between them, so
+	// the window rebuilds some twenty times a second rather than sixty.
 	go func() {
 		var pending strings.Builder
 		last := time.Now()
@@ -191,9 +200,11 @@ func (a *App) SendAI() {
 			pending.Reset()
 			last = time.Now()
 			win.Update(func() {
-				if a.AI.seq == seq {
-					answer.Full += text
+				if a.AI.seq != seq {
+					return
 				}
+				answer.Full += text
+				a.advanceAIReveal(answer)
 			})
 		}
 		_, err := client.Stream(ctx, msgs, func(piece string) {
@@ -204,7 +215,65 @@ func (a *App) SendAI() {
 		})
 		flush()
 		win.Update(func() { finalize(err) })
+		a.revealAITail(seq, answer)
 	}()
+}
+
+// revealAITail shows the rest of the answer after the stream ends, a step
+// every 50 ms on the main thread, until all of it shows. It stops as soon
+// as the conversation changes, as a new chat or a new question does.
+func (a *App) revealAITail(seq uint64, answer *aiMessage) {
+	win := a.Win
+	if win == nil {
+		return
+	}
+	for i := 0; i < 400; i++ {
+		time.Sleep(50 * time.Millisecond)
+		more := false
+		mygo.RunOnMain(func() {
+			if a.AI.seq != seq {
+				return
+			}
+			more = a.advanceAIReveal(answer)
+		})
+		if !more {
+			return
+		}
+		win.Invalidate()
+	}
+}
+
+// advanceAIReveal shows more of the answer's text, as a typewriter paced by
+// the time between frames rather than by the frames themselves: a big
+// backlog catches up in a few seconds, the tail types out at a readable
+// rate. It runs on the main thread, and reports whether more is left.
+func (a *App) advanceAIReveal(m *aiMessage) bool {
+	if m.Full == "" || m.Full == m.Content {
+		if m.Full != "" {
+			m.Content = m.Full
+		}
+		a.AI.RevealPending = false
+		return false
+	}
+	runes := []rune(m.Full)
+	shown := utf8.RuneCountInString(m.Content)
+	if shown >= len(runes) {
+		m.Content = m.Full
+		a.AI.RevealPending = false
+		return false
+	}
+	remaining := len(runes) - shown
+	step := remaining/12 + 3
+	if !a.AI.Streaming {
+		// Nothing more comes: finish within some frames.
+		step = remaining/8 + 3
+	}
+	if next := min(shown+step, len(runes)); next > shown {
+		m.Content = string(runes[:next])
+		shown = next
+	}
+	a.AI.RevealPending = shown < len(runes)
+	return a.AI.RevealPending
 }
 
 // CancelAI stops the stream, keeping what arrived.

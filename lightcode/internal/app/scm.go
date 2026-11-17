@@ -31,13 +31,30 @@ func (a *App) attachRepo() {
 }
 
 // refreshGit reads the status and recent commits, which the SCM panel and
-// the status bar show.
+// the status bar show. It never blocks the window: git runs on a goroutine
+// and its result comes back on the main thread. One refresh runs at a time;
+// the others ask for another round, so a burst of saves spawns one git.
+// Tests, and a call before the window is made, read git at once.
 func (a *App) refreshGit() {
 	if a.Repo == nil {
 		return
 	}
+	if a.Win == nil {
+		a.refreshGitNow(a.Repo)
+		return
+	}
+	if a.gitBusy {
+		a.gitQueued = true
+		return
+	}
+	a.gitBusy = true
+	a.startGitRefresh(a.Repo)
+}
+
+// refreshGitNow is refreshGit on the calling goroutine.
+func (a *App) refreshGitNow(repo *git.Repo) {
 	ctx := context.Background()
-	st, err := a.Repo.Status(ctx)
+	st, err := repo.Status(ctx)
 	if err != nil {
 		a.GitErr = err.Error()
 		return
@@ -45,9 +62,50 @@ func (a *App) refreshGit() {
 	a.GitErr = ""
 	a.Git = st
 	a.Branch = st.Branch
-	if logs, err := a.Repo.Log(ctx, 20); err == nil {
+	if logs, err := repo.Log(ctx, 20); err == nil {
 		a.GitLog = logs
 	}
+}
+
+// startGitRefresh reads the status off the main thread, and the history
+// only while the SCM panel shows it, then publishes both with win.Update.
+func (a *App) startGitRefresh(repo *git.Repo) {
+	win := a.Win
+	withLog := a.SidebarOpen && a.SidebarView == 2
+	go func() {
+		ctx := context.Background()
+		st, err := repo.Status(ctx)
+		var logs []git.LogEntry
+		if err == nil && withLog {
+			logs, _ = repo.Log(ctx, 20)
+		}
+		win.Update(func() {
+			a.gitBusy = false
+			if a.Repo != repo {
+				// Another workspace opened meanwhile: its status may be
+				// what was queued, so read the current repository.
+				if a.gitQueued {
+					a.gitQueued = false
+					a.refreshGit()
+				}
+				return
+			}
+			if err != nil {
+				a.GitErr = err.Error()
+			} else {
+				a.GitErr = ""
+				a.Git = st
+				a.Branch = st.Branch
+				if withLog {
+					a.GitLog = logs
+				}
+			}
+			if a.gitQueued {
+				a.gitQueued = false
+				a.refreshGit()
+			}
+		})
+	}()
 }
 
 // scmPanel is the sidebar's source control view: the branch, the three

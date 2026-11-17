@@ -106,9 +106,11 @@ type App struct {
 	Capabilities capabilityState
 	// Preferences are loaded once, before the window.
 	PrefsLoaded bool
-	gitTick     int
-	DiscardPath string
-	DiscardOpen bool
+	// gitBusy reports a status read running off the main thread, and
+	// gitQueued one asked for meanwhile.
+	gitBusy, gitQueued bool
+	DiscardPath        string
+	DiscardOpen        bool
 	// OutlineOpen shows the outline under the explorer's tree, its
 	// percent the room the tree keeps.
 	OutlineOpen    bool
@@ -300,6 +302,10 @@ func (a *App) ShowSidebar(view int) {
 	}
 	a.SidebarView = view
 	a.SidebarOpen = true
+	if view == 2 {
+		// The history and the current status, as the panel opens.
+		a.refreshGit()
+	}
 	a.SaveState()
 }
 

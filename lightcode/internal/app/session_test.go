@@ -119,6 +119,31 @@ func TestExternalChangeBanner(t *testing.T) {
 	}
 }
 
+// TestCheckDiskReportsChanges keeps an idle window from rebuilding: the
+// check reports whether a frame has to follow it.
+func TestCheckDiskReportsChanges(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.resetColumns()
+	path := filepath.Join(dir, "main.go")
+	a.OpenFile(path)
+	if a.checkDisk() {
+		t.Fatalf("an unchanged file reported a change")
+	}
+	if err := os.WriteFile(path, []byte("package main\n\n// theirs\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(path, info.ModTime().Add(2e9), info.ModTime().Add(2e9)); err != nil {
+		t.Fatal(err)
+	}
+	if !a.checkDisk() {
+		t.Fatalf("a file changed on disk reported no change")
+	}
+}
+
 // TestExternalReloadClean reloads a clean file changed on disk.
 func TestExternalReloadClean(t *testing.T) {
 	a, dir := testWorkspace(t)
