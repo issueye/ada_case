@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Adago 设计体系 MCP 连接",
+    "description": "连接本地 adago-design MCP 服务（http://127.0.0.1:8788/mcp），把设计体系、Token、组件、画布、图标、Logo 与导出工具注册为 mcp__adago_design__*，供智能体直接调用。可以让我按某套设计体系出组件预览、整页稿、图标或画布导出。该端口上的服务需要处于运行状态；启动时服务未运行也能正常启动，连接会自动重试。停用该插件后 adago_design 工具全部移除，重新启用即恢复。",
+    "detail": "docs/DETAIL.zh.md"
+  }
+}

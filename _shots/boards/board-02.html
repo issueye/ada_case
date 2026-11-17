@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><meta charset="utf-8"><title>轻码 IDE · 主窗（浅色）</title>
+<style>
+:root{
+  --bg:#ffffff; --panel:#f7f8fa; --panel2:#eef1f5; --aibg:#fafbfd;
+  --line:#e2e6ed; --soft:rgba(16,24,40,.06);
+  --tx:#1e232c; --tx2:#55606f; --tx3:#8a93a2;
+  --ac:#2f6fde; --acsoft:rgba(47,111,222,.10);
+  --ai:#6f52e8; --aisoft:rgba(111,82,232,.09);
+  --ok:#1c9a78; --warn:#b98a17; --err:#d24b4b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font:13px/1.45 Inter,"Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg)}
+.app{display:flex;flex-direction:column;height:900px}
+.ic{width:16px;height:16px;display:block;flex:none}
+.ic12{width:12px;height:12px;display:block;flex:none}
+.ic14{width:14px;height:14px;display:block;flex:none}
+.ic20{width:20px;height:20px;display:block;flex:none}
+kbd{font:10.5px/1 "JetBrains Mono",Consolas,monospace;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--tx2);background:#fff}
+.titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tb-l{width:392px;display:flex;align-items:center;gap:9px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,#5a97ff,#2f6fde);display:grid;place-items:center;color:#fff;flex:none}
+.brand{font-size:13px;font-weight:600}
+.crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.chipb{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;color:var(--tx2);background:#fff}
+.tb-c{width:420px;display:flex;justify-content:center;flex:none}
+.palette{width:420px;height:26px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--tx3);font-size:11.5px}
+.palette kbd{margin-left:auto;border-color:#eef0f4}
+.tb-r{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tbicon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--tx2)}
+.tbicon.on{background:var(--aisoft);color:var(--ai)}
+.ava{width:24px;height:24px;border-radius:50%;background:#fff;border:1px solid var(--line);display:grid;place-items:center;color:var(--tx2);font:600 10.5px Inter,sans-serif}
+.body{flex:1;display:flex;min-height:0}
+.actv{width:48px;flex:none;background:#f4f6f9;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;gap:2px}
+.act{position:relative;width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:#8c95a4}
+.act.on{color:var(--ac);background:var(--acsoft)}
+.act.on .ind{position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--ac)}
+.act .bd{position:absolute;right:4px;top:4px;width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.actv .sp{flex:1}
+.side{width:240px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{height:36px;display:flex;align-items:center;padding:0 8px 0 14px;border-bottom:1px solid var(--soft);flex:none}
+.shead span{font-size:11px;letter-spacing:.06em;color:var(--tx2)}
+.shead .r{margin-left:auto;display:flex;gap:2px}
+.hb{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--tx3)}
+.tree{padding:4px 8px;font-size:12.5px;overflow:hidden}
+.n{height:24px;display:flex;align-items:center;gap:6px;padding-right:6px;border-radius:4px;color:var(--tx2);white-space:nowrap}
+.n.on{background:var(--acsoft);color:var(--tx)}
+.n .tw{width:12px;flex:none;color:var(--tx3)}
+.n .ci{color:var(--tx3);flex:none}
+.n.folder{color:var(--tx)}
+.n .g{margin-left:auto;font:600 10.5px "JetBrains Mono",monospace;color:var(--warn)}
+.n .g.u{color:var(--ac)}
+.n .g.a{color:var(--ok)}
+.n .dim{color:var(--tx3);font-size:11px;margin-left:auto}
+.lv1{padding-left:6px}.lv2{padding-left:18px}.lv3{padding-left:30px}.lv4{padding-left:42px}
+.div{height:1px;background:var(--soft);margin:8px 4px}
+.sfoot{margin-top:auto;padding:8px 10px;border-top:1px solid var(--soft);display:flex;align-items:center;gap:7px;font-size:11px;color:var(--tx3);flex:none}
+.bar{flex:1;height:4px;border-radius:2px;background:#e7ebf1}
+.bar i{display:block;height:4px;width:74%;background:linear-gradient(90deg,var(--ac),var(--ai))}
+.ed{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tabs{height:36px;flex:none;display:flex;align-items:stretch;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:var(--tx2);border-right:1px solid var(--line);white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 2px 0 var(--ac)}
+.tab .d{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:none}
+.tab .ci{color:var(--tx3)}
+.tab .x{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--tx3)}
+.tabs .sp{flex:1}
+.tabs .r{display:flex;align-items:center;gap:2px;padding:0 8px;border-left:1px solid var(--line)}
+.bc{height:28px;flex:none;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:var(--tx3);border-bottom:1px solid var(--soft)}
+.bc .r{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px}
+.sw{width:26px;height:14px;border-radius:7px;background:var(--acsoft);border:1px solid rgba(47,111,222,.35);position:relative}
+.sw i{position:absolute;top:1px;right:1px;width:10px;height:10px;border-radius:50%;background:var(--ac)}
+.cw{position:relative;flex:1;display:flex;min-height:0}
+.codewrap{flex:1;min-width:0;position:relative;overflow:hidden}
+.band{position:absolute;left:0;right:0;top:368px;height:20px;background:rgba(47,111,222,.055);border-left:2px solid var(--ac)}
+.code{padding:8px 0 0;font:13px/20px "JetBrains Mono",Consolas,monospace;color:#2b3140;counter-reset:n 20}
+.cl{height:20px;position:relative;overflow:hidden;padding-right:8px}
+.cl::before{counter-increment:n;content:counter(n);display:inline-block;width:46px;padding-right:14px;text-align:right;color:#aeb6c2;font-size:11.5px}
+.kw{color:#2f5fbf}.ty{color:#17807a}.fn{color:#8a5f12}.jsx{color:#2f6fde}.cm{color:#8b948b;font-style:italic}.prop{color:#6b4d9e}
+.minimap{width:58px;flex:none;border-left:1px solid var(--soft);position:relative;overflow:hidden;background:linear-gradient(180deg,rgba(47,111,222,.04),transparent 70%)}
+.mm{position:absolute;left:6px;height:2px;border-radius:1px;background:rgba(32,36,44,.18)}
+.term{height:200px;flex:none;background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column}
+.thead{height:32px;flex:none;display:flex;align-items:center;gap:16px;padding:0 10px;font-size:11.5px;color:var(--tx3);border-bottom:1px solid var(--soft)}
+.tt{height:32px;display:flex;align-items:center;gap:6px;white-space:nowrap}
+.tt.on{color:var(--tx);box-shadow:inset 0 -2px 0 var(--ac)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--err)}
+.doty{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.thead .sp{flex:1}
+.tbody{flex:1;padding:8px 12px;font:12px/18px "JetBrains Mono",Consolas,monospace;color:#4a5361;overflow:hidden}
+.tl{height:18px;overflow:hidden;white-space:nowrap}
+.tp{color:var(--ok)}.tpath{color:#22559f}.tok{color:#137a63}.tdim{color:#8c95a4}.tac{color:#2f6fde}
+.cursor{display:inline-block;width:7px;height:12px;background:#3a4250;vertical-align:-2px}
+.ai{width:380px;flex:none;background:var(--aibg);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.aih{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--line)}
+.aib{width:22px;height:22px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none}
+.aih .t{font-size:13px;font-weight:600}
+.model{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--tx2);background:#fff;white-space:nowrap}
+.aih .sp{flex:1}
+.ctx{height:34px;flex:none;display:flex;align-items:center;gap:5px;padding:0 10px;border-bottom:1px solid var(--soft);overflow:hidden}
+.ctxl{font-size:10.5px;color:var(--tx3);flex:none}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;font-size:10.5px;color:var(--tx2);background:#fff;white-space:nowrap}
+.chip .ci{color:var(--tx3)}
+.msgs{flex:1;min-height:0;padding:12px 10px 6px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ume{align-self:flex-end;max-width:292px;background:#eef3fd;border:1px solid #dbe6fb;border-radius:10px 10px 2px 10px;padding:8px 10px;font-size:12px;line-height:18.5px;color:var(--tx)}
+.ume .who{font-size:10.5px;color:var(--tx3);margin-bottom:3px;text-align:right}
+.ai-row{display:flex;gap:8px}
+.av{width:20px;height:20px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none;margin-top:1px}
+.aibody{flex:1;min-width:0}
+.am{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:5px}
+.am .t{color:var(--tx2);font-weight:600;font-size:11px}
+.p{font-size:12px;line-height:19px;color:var(--tx2)}
+.p b{color:var(--tx);font-weight:600}
+.plan{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+.step{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;font-size:11px;line-height:16px;color:var(--tx2);border-bottom:1px solid var(--soft)}
+.step:last-child{border-bottom:0}
+.step .b{width:14px;height:14px;border-radius:50%;display:grid;place-items:center;flex:none;margin-top:1px;border:1px solid var(--line);color:var(--tx3);font:600 9px Inter,sans-serif}
+.step .b.done{background:rgba(28,154,120,.12);border-color:rgba(28,154,120,.4);color:var(--ok)}
+.step .n{color:var(--tx3);font:500 10.5px "JetBrains Mono",monospace;padding-top:1px}
+.diff{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff;margin-bottom:6px}
+.dh{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--soft);font-size:11px;color:var(--tx2)}
+.dh .f{color:var(--tx);font-family:"JetBrains Mono",monospace;font-size:11px}
+.dh .ad{color:var(--ok);font:600 10.5px "JetBrains Mono",monospace}
+.dh .del{color:var(--err);font:600 10.5px "JetBrains Mono",monospace}
+.dh .sp{flex:1}
+.db{font:11px/16.5px "JetBrains Mono",Consolas,monospace;padding:4px 0}
+.dl{display:block;height:16.5px;padding:0 8px;overflow:hidden;white-space:nowrap;color:var(--tx3)}
+.dl.add{background:rgba(28,154,120,.09);color:#0f7a5c}
+.dl.del{background:rgba(210,75,75,.08);color:#a83b3b}
+.dl.hd{color:#9aa2ae}
+.acts{display:flex;gap:6px;align-items:center;padding:7px 8px}
+.btn{height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;color:var(--tx2);border:1px solid var(--line);background:#fff;white-space:nowrap;flex:none}
+.btn.pri{width:72px;background:var(--ac);border-color:var(--ac);color:#fff;font-weight:600}
+.btn.g1{width:58px;background:transparent}
+.btn.g2{width:46px;background:transparent}
+.btn.w108{width:108px;background:transparent}
+.btn.w86{width:86px;background:transparent}
+.suite{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2);margin:2px 0}
+.follow{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.fchip{display:inline-flex;align-items:center;gap:4px;border:1px dashed #d6dbe3;border-radius:999px;padding:3px 9px;font-size:10.5px;color:var(--tx2);background:#fff;white-space:nowrap}
+.cmp{flex:none;padding:9px 10px 11px;border-top:1px solid var(--line);background:var(--panel2)}
+.inp{border:1px solid var(--line);border-radius:8px;background:#fff;padding:8px 9px}
+.inp .ph{font-size:12px;color:var(--tx3);line-height:18px;white-space:nowrap;overflow:hidden}
+.tools{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10.5px;color:var(--tx3)}
+.tool{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--tx2);background:#fff;white-space:nowrap}
+.tool.on{border-color:rgba(111,82,232,.4);color:var(--ai);background:var(--aisoft)}
+.tools .sp{flex:1}
+.tok2{color:var(--tx3);font:10.5px "JetBrains Mono",monospace;white-space:nowrap}
+.send{width:26px;height:26px;border-radius:50%;background:var(--ac);color:#fff;display:grid;place-items:center;flex:none}
+.st{height:24px;flex:none;background:#eff2f7;border-top:1px solid var(--line);display:flex;align-items:center;gap:13px;padding:0 12px;font-size:10.5px;color:#6a7381;overflow:hidden}
+.st .s{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st .sp{flex:1}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4l1.9 4.9 4.9 1.9-4.9 1.9L11 17.1l-1.9-4.9L4.2 10.2l4.9-1.9z" fill="currentColor"/><path d="M17.8 12.8l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 13h6"/><path d="M9 16h4"/></g></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A1.5 1.5 0 015.5 6h3.2c.4 0 .8.2 1 .5L11 8h7.5A1.5 1.5 0 0120 9.5v8A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5z"/></g></symbol>
+<symbol id="i-folder-open" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6.5A1.5 1.5 0 015.5 5h3.2c.4 0 .8.2 1 .5L11 7h6.5A1.5 1.5 0 0119 8.5V10"/><path d="M4 10h15.2a1 1 0 01.96 1.28l-1.6 5.4A1.5 1.5 0 0117.1 18H5.5A1.5 1.5 0 014 16.5z"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.6-3.6"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.4"/><circle cx="8" cy="18" r="2.4"/><circle cx="16" cy="10.5" r="2.4"/><line x1="8" y1="8.4" x2="8" y2="15.6"/><path d="M16 12.9v1.4c0 1.9-1.6 3.3-3.7 3.3H10.4"/></g></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.8l5 3.2-5 3.2z"/></g></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h3"/><path d="M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.4 3.9-5 7-5s5.8 1.6 7 5"/></g></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></g></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+<symbol id="i-cdown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></g></symbol>
+<symbol id="i-cright" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></g></symbol>
+<symbol id="i-panel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="14.8" y1="5" x2="14.8" y2="19"/></g></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7.5 10.4l2.8 2.4-2.8 2.4"/><line x1="13" y1="15" x2="16.8" y2="15"/></g></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></g></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9"/><path d="M20 6.5V12h-5.5"/></g></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9.5 7V5h5v2"/><path d="M6.5 7l1 13h9l1-13"/></g></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></g></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6"/><path d="M12 16.4v.9"/></g></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 4.5-8 4.5-8-4.5z"/><path d="M4 13l8 4.5 8-4.5"/><path d="M4 17.5l8 4.5 8-4.5"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-4 5 4 5"/><path d="M15 7l4 5-4 5"/></g></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.8c0 3.3-3.6 6-8 6-1 0-1.9-.14-2.8-.4L4 19l1.2-3.3A5.9 5.9 0 014 11.8C4 8.5 7.6 5.8 12 5.8s8 2.7 8 6z"/></g></symbol>
+<symbol id="i-file-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M10 12l-1.6 2 1.6 2"/><path d="M14 12l1.6 2-1.6 2"/></g></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h9a5 5 0 010 10H8"/><path d="M8 6l-4 4 4 4"/></g></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-l">
+      <div class="mark"><svg class="ic14" viewBox="0 0 24 24" style="color:#fff"><use href="#i-sparkles"/></svg></div>
+      <span class="brand">轻码</span>
+      <div class="crumb"><span>ada_case</span><span>/</span><span class="chipb"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</span></div>
+    </div>
+    <div class="tb-c">
+      <div class="palette"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索文件、命令与 AI 指令…</span><kbd>⌘K</kbd></div>
+    </div>
+    <div class="tb-r">
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-theme"/></svg></div>
+      <div class="tbicon on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+      <div class="ava">AY</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="actv">
+      <div class="act on"><span class="ind"></span><svg class="ic20" viewBox="0 0 24 24"><use href="#i-file"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-search"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-git"/></svg><span class="bd"></span></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-play"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+      <div class="sp"></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+    </div>
+
+    <div class="side">
+      <div class="shead"><span>资源管理器</span>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-folder-open"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+      <div class="tree">
+        <div class="n folder lv1"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder-open"/></svg>ada_case<span class="dim">8</span></div>
+        <div class="n folder lv2"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>src</div>
+        <div class="n folder lv3"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>components</div>
+        <div class="n on lv4"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>PreviewCard.tsx<span class="g a">A</span></div>
+        <div class="n lv4"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>Card.tsx</div>
+        <div class="n lv3"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>App.tsx<span class="g">M</span></div>
+        <div class="n lv3"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>main.ts</div>
+        <div class="n lv3"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>theme.css<span class="g">M</span></div>
+        <div class="n folder lv2"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>tests</div>
+        <div class="n lv3"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>preview-card.test.ts<span class="g a">A</span></div>
+        <div class="n folder lv2"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>docs</div>
+        <div class="n lv2"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>package.json</div>
+        <div class="n lv2"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>tsconfig.json</div>
+        <div class="div"></div>
+        <div class="n folder lv1"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-message"/></svg>AI 会话<span class="dim">4</span></div>
+      </div>
+      <div class="sfoot"><span>上下文</span><span class="bar"><i></i></span><span>15.8k / 128k</span></div>
+    </div>
+
+    <div class="ed">
+      <div class="tabs">
+        <div class="tab on"><svg class="ic14" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg>PreviewCard.tsx<span class="d"></span><span class="x"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-close"/></svg></span></div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#7d6bbf"><use href="#i-file"/></svg>theme.css<span class="d"></span></div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#b5793a"><use href="#i-file"/></svg>index.html</div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#2f6fde"><use href="#i-code"/></svg>App.tsx<span class="d"></span></div>
+        <div class="sp"></div>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="bc">
+        <span>src</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span>components</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span style="color:var(--tx2)">PreviewCard</span>
+        <div class="r"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg><span>AI 已写入 · 08:13</span><span class="sw"><i></i></span></div>
+      </div>
+
+      <div class="cw">
+        <div class="codewrap">
+          <div class="band"></div>
+          <div class="code">
+            <div class="cl"><span class="kw">import</span> { useState } <span class="kw">from</span> 'react';</div>
+            <div class="cl"><span class="kw">import type</span> { CardProps } <span class="kw">from</span> './types';</div>
+            <div class="cl">&nbsp;</div>
+            <div class="cl"><span class="kw">export function</span> <span class="fn">PreviewCard</span>({ thumb, title }: CardProps) {</div>
+            <div class="cl">&nbsp;&nbsp;<span class="kw">const</span> [open, setOpen] = <span class="fn">useState</span>(<span class="kw">false</span>);</div>
+            <div class="cl">&nbsp;</div>
+            <div class="cl">&nbsp;&nbsp;<span class="kw">return</span> (</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">div</span></div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">className</span>='pcard'</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">onMouseEnter</span>={() =&gt; <span class="fn">setOpen</span>(<span class="kw">true</span>)}</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">onMouseLeave</span>={() =&gt; <span class="fn">setOpen</span>(<span class="kw">false</span>)}</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">onFocus</span>={() =&gt; <span class="fn">setOpen</span>(<span class="kw">true</span>)}</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="prop">tabIndex</span>={0}</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&gt;</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">img</span> <span class="prop">className</span>='pcard-thumb' <span class="prop">src</span>={thumb} <span class="prop">alt</span>={title} /&gt;</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{open &amp;&amp; (</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">div</span> <span class="prop">className</span>='pcard-pop' <span class="prop">role</span>='tooltip'&gt;</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">img</span> <span class="prop">src</span>={thumb} <span class="prop">alt</span>='' /&gt;</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">span</span>&gt;{title}&lt;/<span class="jsx">span</span>&gt;</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;/<span class="jsx">div</span>&gt;</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)}</div>
+            <div class="cl">&nbsp;&nbsp;&nbsp;&nbsp;&lt;/<span class="jsx">div</span>&gt;</div>
+            <div class="cl">&nbsp;&nbsp;);</div>
+            <div class="cl">}</div>
+          </div>
+        </div>
+        <div class="minimap">
+          <span class="mm" style="top:16px;width:28px"></span><span class="mm" style="top:22px;width:34px"></span><span class="mm" style="top:34px;width:22px"></span><span class="mm" style="top:46px;width:36px"></span><span class="mm" style="top:52px;width:26px"></span><span class="mm" style="top:64px;width:18px"></span><span class="mm" style="top:76px;width:30px"></span><span class="mm" style="top:82px;width:22px"></span><span class="mm" style="top:94px;width:34px"></span><span class="mm" style="top:100px;width:20px"></span><span class="mm" style="top:112px;width:28px"></span><span class="mm" style="top:118px;width:24px"></span><span class="mm" style="top:130px;width:32px"></span><span class="mm" style="top:136px;width:18px"></span><span class="mm" style="top:148px;width:26px"></span><span class="mm" style="top:154px;width:34px"></span><span class="mm" style="top:166px;width:20px"></span><span class="mm" style="top:172px;width:30px"></span><span class="mm" style="top:184px;width:22px"></span><span class="mm" style="top:190px;width:28px"></span><span class="mm" style="top:202px;width:16px"></span><span class="mm" style="top:214px;width:32px"></span><span class="mm" style="top:220px;width:24px"></span><span class="mm" style="top:232px;width:36px;height:3px"></span><span class="mm" style="top:238px;width:20px"></span><span class="mm" style="top:250px;width:34px"></span><span class="mm" style="top:256px;width:22px"></span><span class="mm" style="top:268px;width:26px"></span><span class="mm" style="top:274px;width:32px"></span><span class="mm" style="top:286px;width:18px"></span><span class="mm" style="top:298px;width:24px"></span><span class="mm" style="top:304px;width:30px"></span><span class="mm" style="top:316px;width:20px"></span><span class="mm" style="top:322px;width:28px"></span><span class="mm" style="top:334px;width:34px"></span><span class="mm" style="top:340px;width:22px"></span><span class="mm" style="top:352px;width:26px"></span><span class="mm" style="top:358px;width:18px"></span><span class="mm" style="top:370px;width:30px"></span><span class="mm" style="top:376px;width:24px"></span><span class="mm" style="top:388px;width:32px"></span><span class="mm" style="top:394px;width:16px"></span><span class="mm" style="top:406px;width:28px"></span><span class="mm" style="top:412px;width:34px"></span>
+        </div>
+      </div>
+
+      <div class="term">
+        <div class="thead">
+          <div class="tt on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-term"/></svg>终端</div>
+          <div class="tt">输出</div>
+          <div class="tt">问题<span class="doty"></span><span style="color:var(--tx2)">1</span></div>
+          <div class="tt">AI 任务<span class="dot"></span><span style="color:var(--tx2)">1</span></div>
+          <div class="sp"></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-trash"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+        </div>
+        <div class="tbody">
+          <div class="tl"><span class="tp">$</span> <span class="tac">pnpm test</span></div>
+          <div class="tl"><span class="tdim">&gt; vitest run</span></div>
+          <div class="tl">&nbsp;</div>
+          <div class="tl">&nbsp;&nbsp;<span class="tok">tests/preview-card.test.ts</span></div>
+          <div class="tl">&nbsp;&nbsp;&nbsp;&nbsp;<span class="tok">2 tests passed</span><span class="tdim">&nbsp;&nbsp;412 ms</span></div>
+          <div class="tl">&nbsp;</div>
+          <div class="tl">&nbsp;&nbsp;<span class="tdim">悬停打开预览 · 离开关闭预览</span></div>
+          <div class="tl">&nbsp;</div>
+          <div class="tl">&nbsp;&nbsp;<span class="tok">Test Files&nbsp;&nbsp;1 passed</span><span class="tdim">&nbsp;Tests&nbsp;&nbsp;2 passed</span></div>
+          <div class="tl"><span class="tp">$</span> <span class="cursor"></span></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="ai">
+      <div class="aih">
+        <div class="aib"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+        <span class="t">AI 助手</span>
+        <span class="model">DeepSeek V4 · Flash<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sp"></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      </div>
+
+      <div class="ctx">
+        <span class="ctxl">上下文</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>PreviewCard</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>theme.css</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-git"/></svg>改动 4</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
+      </div>
+
+      <div class="msgs">
+        <div class="ume">
+          <div class="who">你 · 08:15</div>
+          顺便把浮层背景换成主题色，再补两条测试。
+        </div>
+
+        <div class="ai-row">
+          <div class="av"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+          <div class="aibody">
+            <div class="am"><span class="t">AI</span><span>08:16</span><span>·</span><span>已应用 2 个文件 · 2 条测试通过</span></div>
+            <div class="p">已把浮层背景改为主题色变量 <b>--card-bg</b>，并补了悬停打开 / 离开关闭两条测试。</div>
+            <div class="plan">
+              <div class="step"><span class="n">1</span><span class="b done"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>新建 PreviewCard.tsx — 组件 + 悬停浮层</span></div>
+              <div class="step"><span class="n">2</span><span class="b done"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>App.tsx 替换内联卡片</span></div>
+              <div class="step"><span class="n">3</span><span class="b done"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>补测试并运行通过</span></div>
+            </div>
+            <div class="diff">
+              <div class="dh"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ok)"><use href="#i-check"/></svg><span class="f">theme.css · 已应用</span><span class="ad">+3</span><span class="del">−1</span><span class="sp"></span><span class="btn g1">撤销</span></div>
+              <div class="db">
+                <div class="dl hd">@@ -86,2 +86,4 @@ .pcard-pop</div>
+                <div class="dl del">-&nbsp;&nbsp;--card-bg: var(--panel-weak);</div>
+                <div class="dl add">+&nbsp;&nbsp;--card-bg: var(--surface-2);</div>
+                <div class="dl add">+&nbsp;&nbsp;--card-ring: rgba(47,111,222,.35);</div>
+              </div>
+              <div class="acts">
+                <span class="btn w108"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-undo"/></svg>撤销本次改动</span>
+                <span class="btn w86">打开预览</span>
+              </div>
+            </div>
+            <div class="suite"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ok)"><use href="#i-check"/></svg><span>2 tests passed · preview-card.test.ts · 412 ms</span></div>
+            <div class="follow">
+              <span class="fchip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>再补键盘用例</span>
+              <span class="fchip">抽出 DocThumb</span>
+              <span class="fchip">提交到 main</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmp">
+        <div class="inp">
+          <div class="ph">继续描述改动… 例如：浮层加 120ms 延迟</div>
+        </div>
+        <div class="tools">
+          <span class="tool on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>读文件</span>
+          <span class="tool on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-term"/></svg>运行命令</span>
+          <span class="sp"></span>
+          <span class="tok2">15.8k / 128k</span>
+          <span class="send"><svg class="ic12" viewBox="0 0 24 24" style="color:#fff"><use href="#i-arrow-right"/></svg></span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="st">
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main*</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>0↓ 2↑</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--warn)"><use href="#i-alert"/></svg>1</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ok)"><use href="#i-check"/></svg>2</div>
+    <div class="sp"></div>
+    <div class="s"><span class="livedot"></span>AI 就绪</div>
+    <div class="s">Ln 24, Col 40</div>
+    <div class="s">空格: 2</div>
+    <div class="s">UTF-8</div>
+    <div class="s">LF</div>
+    <div class="s">TypeScript React</div>
+  </footer>
+</div>
+</body></html>

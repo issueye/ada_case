@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><meta charset="utf-8"><title>轻码 IDE · 分支与提交历史</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#14181e; --panel2:#181d24; --elev:#1d232c; --aibg:#12161c;
+  --line:#252c37; --soft:rgba(255,255,255,.06);
+  --tx:#d9dee7; --tx2:#9aa4b2; --tx3:#68717f;
+  --ac:#5b9cff; --acsoft:rgba(91,156,255,.15);
+  --ai:#a78bfa; --aisoft:rgba(167,139,250,.12);
+  --ok:#3fbf9f; --warn:#e0b341; --err:#ef6b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font:13px/1.45 Inter,"Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg)}
+.app{position:relative;display:flex;flex-direction:column;height:900px}
+.ic{width:16px;height:16px;display:block;flex:none}
+.ic12{width:12px;height:12px;display:block;flex:none}
+.ic14{width:14px;height:14px;display:block;flex:none}
+.ic20{width:20px;height:20px;display:block;flex:none}
+kbd{font:10.5px/1 "JetBrains Mono",Consolas,monospace;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--tx2);background:var(--panel2)}
+.titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tb-l{width:392px;display:flex;align-items:center;gap:9px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,#6aa8ff,#3d6ed8);display:grid;place-items:center;color:#0b1424;flex:none}
+.brand{font-size:13px;font-weight:600}
+.crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.chipb{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;color:var(--tx2);background:var(--panel2)}
+.chipb.on{border-color:rgba(91,156,255,.5);color:var(--tx)}
+.tb-c{width:420px;display:flex;justify-content:center;flex:none}
+.palette{width:420px;height:26px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--elev);color:var(--tx3);font-size:11.5px}
+.palette kbd{margin-left:auto;background:transparent}
+.tb-r{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tbicon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--tx2)}
+.tbicon.on{background:var(--aisoft);color:var(--ai)}
+.ava{width:24px;height:24px;border-radius:50%;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;color:var(--tx2);font:600 10.5px Inter,sans-serif}
+.body{flex:1;display:flex;min-height:0}
+.actv{width:48px;flex:none;background:#11151a;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;gap:2px}
+.act{position:relative;width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:var(--tx3)}
+.act.on{color:#cfd8e6;background:var(--acsoft)}
+.act.on .ind{position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--ac)}
+.actv .sp{flex:1}
+.side{width:240px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{height:36px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px 0 14px;border-bottom:1px solid var(--soft)}
+.shead span{font-size:11px;letter-spacing:.06em;color:var(--tx2)}
+.shead .r{margin-left:auto;display:flex;gap:2px}
+.hb{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--tx3)}
+.branchbar{height:32px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;border-bottom:1px solid var(--soft);font-size:12px}
+.branchbar .b{display:flex;align-items:center;gap:5px;color:var(--tx);border:1px solid rgba(91,156,255,.45);background:var(--acsoft);border-radius:5px;padding:2px 6px}
+.branchbar .sync{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--tx3);font:10.5px "JetBrains Mono",monospace}
+.branchbar .sync .s{display:flex;align-items:center;gap:2px}
+.sec{height:26px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10.5px;letter-spacing:.04em;color:var(--tx3);border-top:1px solid var(--soft);margin-top:4px}
+.sec .cnt{margin-left:auto;font:600 10px "JetBrains Mono",monospace}
+.brow{height:24px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11.5px;color:var(--tx2);white-space:nowrap}
+.brow.on{background:var(--acsoft);color:var(--tx)}
+.brow .nm{display:flex;align-items:center;gap:5px}
+.brow .tag{margin-left:auto;font-size:9.5px;color:var(--tx3);border:1px solid var(--line);border-radius:3px;padding:0 4px}
+.brow .tag.cur{color:var(--ac);border-color:rgba(91,156,255,.4)}
+.brow .ab{display:flex;align-items:center;gap:2px;color:var(--tx3);font:10px "JetBrains Mono",monospace}
+.hrow{height:36px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 6px}
+.hrow.on{background:var(--acsoft)}
+.hrow .g{position:relative;width:18px;height:36px;flex:none}
+.hrow .g .ln{position:absolute;left:5px;top:-18px;bottom:-18px;width:1px;background:var(--line)}
+.hrow .g .dot{position:absolute;left:2px;top:14px;width:7px;height:7px;border-radius:50%;background:var(--tx3);border:1px solid var(--bg)}
+.hrow.on .g .dot{background:var(--ac)}
+.hrow .mx{flex:1;min-width:0}
+.hrow .sj{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden}
+.hrow.on .sj{color:var(--tx)}
+.hrow .mt{font:10px "JetBrains Mono",monospace;color:var(--tx3);margin-top:1px}
+.dcard{margin-top:auto;border-top:1px solid var(--soft);padding:9px 10px;background:var(--panel2)}
+.dcard .t{font-size:11.5px;color:var(--tx);line-height:16px}
+.dcard .m{font-size:10.5px;color:var(--tx3);margin-top:4px}
+.dcard .files{margin-top:7px;display:flex;flex-direction:column;gap:3px}
+.dcard .f{display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--tx2);white-space:nowrap}
+.dcard .f .st{margin-left:auto;font:600 10px "JetBrains Mono",monospace;color:var(--ok)}
+.dcard .acts{display:flex;gap:5px;margin-top:8px}
+.btn{height:24px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:11px;color:var(--tx2);border:1px solid var(--line);background:var(--panel);white-space:nowrap;flex:none;padding:0 8px}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#0a1220;font-weight:600}
+.sfoot{height:26px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--soft)}
+.ed{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tabs{height:36px;flex:none;display:flex;align-items:stretch;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:var(--tx2);border-right:1px solid var(--line);white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 2px 0 var(--ac)}
+.tab .x{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--tx3)}
+.tabs .sp{flex:1}
+.tabs .r{display:flex;align-items:center;gap:2px;padding:0 8px;border-left:1px solid var(--line)}
+.bc{height:28px;flex:none;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:var(--tx3);border-bottom:1px solid var(--soft)}
+.bc .r{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px}
+.dhbar{height:34px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px;background:var(--panel2);border-bottom:1px solid var(--line)}
+.author{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2)}
+.author .av{width:18px;height:18px;border-radius:50%;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;font:600 9px Inter,sans-serif;color:var(--tx2)}
+.dhsp{flex:1}
+.diffarea{flex:1;min-height:0;overflow:hidden;font:12px/18px "JetBrains Mono",Consolas,monospace;padding-top:2px}
+.fh{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;background:var(--panel2);border-top:1px solid var(--line);border-bottom:1px solid var(--soft);font-size:11.5px;color:var(--tx2)}
+.fh .nm{color:var(--tx)}
+.fh .st{font:600 10.5px "JetBrains Mono",monospace;color:var(--ok)}
+.fh .sp{flex:1}
+.drow{display:flex;height:18px;line-height:18px;white-space:nowrap}
+.dnum{width:38px;flex:none;text-align:right;padding-right:8px;color:#4d5563;font-size:11px}
+.dnum2{width:38px;flex:none;text-align:right;padding-right:8px;color:#4d5563;font-size:11px;border-right:1px solid var(--soft)}
+.dsign{width:16px;flex:none;text-align:center;color:var(--tx3)}
+.dcode{flex:1;padding-right:8px;overflow:hidden;color:#c7cfdb}
+.drow.add{background:rgba(63,191,159,.10)}
+.drow.add .dsign{color:var(--ok)}
+.drow.add .dcode{color:#a9e6d2}
+.drow.del{background:rgba(239,107,107,.09)}
+.drow.del .dsign{color:var(--err)}
+.drow.del .dcode{color:#f1b3b3}
+.drow.ctx .dcode{color:#9aa4b2}
+.tcollapsed{height:32px;flex:none;display:flex;align-items:center;gap:14px;padding:0 10px;background:var(--panel);border-top:1px solid var(--line);font-size:11.5px;color:var(--tx3)}
+.tcollapsed .tt{display:flex;align-items:center;gap:6px}
+.tcollapsed .tt.on{color:var(--tx2)}
+.tcollapsed .sp{flex:1}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--err)}
+.doty{width:6px;height:6px;border-radius:50%;background:var(--warn)}
+.ai{width:380px;flex:none;background:var(--aibg);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.aih{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--line)}
+.aib{width:22px;height:22px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none}
+.aih .t{font-size:13px;font-weight:600}
+.model{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.aih .sp{flex:1}
+.ctx{height:34px;flex:none;display:flex;align-items:center;gap:5px;padding:0 10px;border-bottom:1px solid var(--soft);overflow:hidden}
+.ctxl{font-size:10.5px;color:var(--tx3);flex:none}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.chip .ci{color:var(--tx3)}
+.msgs{flex:1;min-height:0;padding:12px 10px 6px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ume{align-self:flex-end;max-width:290px;background:var(--elev);border:1px solid var(--line);border-radius:10px 10px 2px 10px;padding:8px 10px;font-size:12px;line-height:18.5px;color:var(--tx)}
+.ume .who{font-size:10.5px;color:var(--tx3);margin-bottom:3px;text-align:right}
+.ai-row{display:flex;gap:8px}
+.av{width:20px;height:20px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none;margin-top:1px}
+.aibody{flex:1;min-width:0}
+.am{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:5px}
+.am .t{color:var(--tx2);font-weight:600;font-size:11px}
+.p{font-size:12px;line-height:19px;color:var(--tx2)}
+.p b{color:var(--tx);font-weight:600}
+.box{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.box .bi{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;font-size:11px;line-height:16px;color:var(--tx2);border-bottom:1px solid var(--soft)}
+.box .bi:last-child{border-bottom:0}
+.box .bi .b{flex:none;margin-top:1px;color:var(--ac)}
+.follow{display:flex;gap:6px;margin-top:9px;flex-wrap:wrap}
+.fchip{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line);border-radius:999px;padding:3px 9px;font-size:10.5px;color:var(--tx2);white-space:nowrap}
+.cmp{flex:none;padding:9px 10px 11px;border-top:1px solid var(--line);background:var(--panel2)}
+.inp{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 9px}
+.inp .ph{font-size:12px;color:var(--tx3);line-height:18px;white-space:nowrap;overflow:hidden}
+.tools{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10.5px;color:var(--tx3)}
+.tool{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--tx2);background:var(--panel);white-space:nowrap}
+.tool.on{border-color:rgba(167,139,250,.45);color:#c9c0ee;background:var(--aisoft)}
+.tools .sp{flex:1}
+.tok2{color:var(--tx3);font:10.5px "JetBrains Mono",monospace;white-space:nowrap}
+.send{width:26px;height:26px;border-radius:50%;background:var(--ac);color:#0a1220;display:grid;place-items:center;flex:none}
+.st{height:24px;flex:none;background:#0c1015;border-top:1px solid var(--line);display:flex;align-items:center;gap:13px;padding:0 12px;font-size:10.5px;color:var(--tx3);overflow:hidden}
+.st .s{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st .sp{flex:1}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+.pop{position:absolute;left:96px;top:44px;width:300px;background:var(--elev);border:1px solid var(--line);border-radius:8px;box-shadow:0 18px 40px rgba(0,0,0,.5);z-index:30;overflow:hidden}
+.pop .ph{height:32px;display:flex;align-items:center;gap:8px;padding:0 10px;font-size:11.5px;color:var(--tx);border-bottom:1px solid var(--soft)}
+.pop .ph .sp{flex:1}
+.pop .sr{display:flex;align-items:center;gap:6px;margin:8px 10px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;font-size:11px;color:var(--tx3);background:var(--panel2)}
+.pop .pi{height:28px;display:flex;align-items:center;gap:7px;padding:0 10px;font-size:11.5px;color:var(--tx2);white-space:nowrap}
+.pop .pi.on{background:var(--acsoft);color:var(--tx)}
+.pop .pi .nm{display:flex;align-items:center;gap:5px}
+.pop .pi .st{margin-left:auto;font-size:9.5px;color:var(--tx3);display:flex;align-items:center;gap:3px}
+.pop .pf{height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;border-top:1px solid var(--soft);font-size:11px;color:var(--tx2);background:var(--panel2)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4l1.9 4.9 4.9 1.9-4.9 1.9L11 17.1l-1.9-4.9L4.2 10.2l4.9-1.9z" fill="currentColor"/><path d="M17.8 12.8l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 13h6"/><path d="M9 16h4"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.4"/><circle cx="8" cy="18" r="2.4"/><circle cx="16" cy="10.5" r="2.4"/><line x1="8" y1="8.4" x2="8" y2="15.6"/><path d="M16 12.9v1.4c0 1.9-1.6 3.3-3.7 3.3H10.4"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.6-3.6"/></g></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></g></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+<symbol id="i-cdown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></g></symbol>
+<symbol id="i-cright" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></g></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9"/><path d="M20 6.5V12h-5.5"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></g></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9.5 7V5h5v2"/><path d="M6.5 7l1 13h9l1-13"/></g></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></g></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-4 5 4 5"/><path d="M15 7l4 5-4 5"/></g></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 4.5-8 4.5-8-4.5z"/><path d="M4 13l8 4.5 8-4.5"/><path d="M4 17.5l8 4.5 8-4.5"/></g></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.8l5 3.2-5 3.2z"/></g></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7.5 10.4l2.8 2.4-2.8 2.4"/><line x1="13" y1="15" x2="16.8" y2="15"/></g></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-panel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="14.8" y1="5" x2="14.8" y2="19"/></g></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h3"/><path d="M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.4 3.9-5 7-5s5.8 1.6 7 5"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6"/><path d="M12 16.4v.9"/></g></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></g></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></g></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></g></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-l">
+      <div class="mark"><svg class="ic14" viewBox="0 0 24 24" style="color:#0b1424"><use href="#i-sparkles"/></svg></div>
+      <span class="brand">轻码</span>
+      <div class="crumb"><span>ada_case</span><span>/</span><span class="chipb on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main<svg class="ic12" viewBox="0 0 24 24" style="color:var(--tx3)"><use href="#i-cdown"/></svg></span></div>
+    </div>
+    <div class="tb-c">
+      <div class="palette"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索文件、命令与 AI 指令…</span><kbd>Ctrl K</kbd></div>
+    </div>
+    <div class="tb-r">
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-theme"/></svg></div>
+      <div class="tbicon on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+      <div class="ava">AY</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="actv">
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-file"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-search"/></svg></div>
+      <div class="act on"><span class="ind"></span><svg class="ic20" viewBox="0 0 24 24"><use href="#i-git"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-play"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+      <div class="sp"></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+    </div>
+
+    <div class="side">
+      <div class="shead"><span>源代码管理</span>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="branchbar">
+        <span class="b"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-git"/></svg>main<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sync">
+          <span class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</span>
+          <span class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg>0</span>
+        </div>
+      </div>
+
+      <div class="sec">本地分支<span class="cnt">3</span></div>
+      <div class="brow on"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</span><span class="tag cur">当前</span><span class="ab"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</span></div>
+      <div class="brow"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>feat/preview-card</span><span class="ab"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>3</span></div>
+      <div class="brow"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>fix/theme-token</span></div>
+
+      <div class="sec">最近提交<span class="cnt">5</span></div>
+      <div class="hrow on">
+        <div class="g"><span class="ln"></span><span class="dot"></span></div>
+        <div class="mx"><div class="sj">抽成 PreviewCard 组件</div><div class="mt">8f2c1a9 · 你 · 08:12</div></div>
+      </div>
+      <div class="hrow">
+        <div class="g"><span class="ln"></span><span class="dot"></span></div>
+        <div class="mx"><div class="sj">主题色变量改用 --surface-2</div><div class="mt">b41d7e0 · 你 · 昨天 18:40</div></div>
+      </div>
+      <div class="hrow">
+        <div class="g"><span class="ln"></span><span class="dot"></span></div>
+        <div class="mx"><div class="sj">初始化项目骨架</div><div class="mt">9ac02f1 · 你 · 3 天前</div></div>
+      </div>
+      <div class="hrow">
+        <div class="g"><span class="ln"></span><span class="dot"></span></div>
+        <div class="mx"><div class="sj">添加终端与状态栏</div><div class="mt">77e8d21 · 你 · 5 天前</div></div>
+      </div>
+      <div class="hrow">
+        <div class="g"><span class="ln"></span><span class="dot"></span></div>
+        <div class="mx"><div class="sj">首次提交</div><div class="mt">c0a9b34 · 你 · 6 天前</div></div>
+      </div>
+
+      <div class="dcard">
+        <div class="t">抽成 PreviewCard 组件</div>
+        <div class="m">8f2c1a9 · 你 &lt;you@lightcode.dev&gt; · 2 个文件 · +31 −1</div>
+        <div class="files">
+          <div class="f"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-code"/></svg>PreviewCard.tsx<span class="st">+28</span></div>
+          <div class="f"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-file"/></svg>theme.css<span class="st">+3 −1</span></div>
+        </div>
+        <div class="acts">
+          <span class="btn"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg>在 AI 中解释</span>
+          <span class="btn">撤销提交</span>
+        </div>
+      </div>
+      <div class="sfoot"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>已同步 origin/main</div>
+    </div>
+
+    <div class="ed">
+      <div class="tabs">
+        <div class="tab on"><svg class="ic14" viewBox="0 0 24 24" style="color:#9dc0e6"><use href="#i-git"/></svg>提交 · 8f2c1a9<span class="x"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-close"/></svg></span></div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#c79cf0"><use href="#i-file"/></svg>PreviewCard.tsx</div>
+        <div class="sp"></div>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="bc">
+        <span>main</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span>8f2c1a9</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span style="color:var(--tx2)">抽成 PreviewCard 组件</span>
+        <div class="r"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg><span>AI 已读取本次提交</span></div>
+      </div>
+
+      <div class="dhbar">
+        <div class="author"><span class="av">AY</span><span>你</span><span style="color:var(--tx3)">·</span><span>08:12</span><span style="color:var(--tx3)">·</span><span>2 个文件 +31 −1</span></div>
+        <div class="dhsp"></div>
+        <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-copy"/></svg>8f2c1a9</span>
+        <span class="btn"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg>在 AI 中解释</span>
+        <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-left"/></svg>上一提交</span>
+      </div>
+
+      <div class="diffarea">
+        <div class="fh"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-code"/></svg><span class="nm">components/PreviewCard.tsx</span><span class="st">+28</span><span style="color:var(--tx3);font-size:10px;border:1px solid rgba(63,191,159,.4);border-radius:3px;padding:0 4px;color:var(--ok)">新增</span><span class="sp"></span><svg class="ic12" viewBox="0 0 24 24" style="color:var(--tx3)"><use href="#i-more"/></svg></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">1</span><span class="dsign">+</span><span class="dcode">import { useState } from 'react';</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">2</span><span class="dsign">+</span><span class="dcode">import type { CardProps } from './types';</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">3</span><span class="dsign">+</span><span class="dcode"> </span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">4</span><span class="dsign">+</span><span class="dcode">export function PreviewCard({ thumb, title }: CardProps) {</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">5</span><span class="dsign">+</span><span class="dcode">  const [open, setOpen] = useState(false);</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">6</span><span class="dsign">+</span><span class="dcode">  return (</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">7</span><span class="dsign">+</span><span class="dcode">    &lt;div className='pcard' onMouseEnter={show}&gt;</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">8</span><span class="dsign">+</span><span class="dcode">      {open &amp;&amp; &lt;img src={thumb} alt={title} /&gt;}</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">9</span><span class="dsign">+</span><span class="dcode">    &lt;/div&gt;</span></div>
+
+        <div class="fh"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-file"/></svg><span class="nm">styles/theme.css</span><span class="st">+3 −1</span><span class="sp"></span><svg class="ic12" viewBox="0 0 24 24" style="color:var(--tx3)"><use href="#i-more"/></svg></div>
+        <div class="drow ctx"><span class="dnum">86</span><span class="dnum2">86</span><span class="dsign"> </span><span class="dcode">.pcard-pop {</span></div>
+        <div class="drow del"><span class="dnum">87</span><span class="dnum2"></span><span class="dsign">−</span><span class="dcode">  background: var(--panel-weak);</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">87</span><span class="dsign">+</span><span class="dcode">  background: var(--surface-2);</span></div>
+        <div class="drow add"><span class="dnum"></span><span class="dnum2">88</span><span class="dsign">+</span><span class="dcode">  box-shadow: 0 0 0 1px var(--card-ring);</span></div>
+      </div>
+
+      <div class="tcollapsed">
+        <span class="tt on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-term"/></svg>终端</span>
+        <span class="tt">输出</span>
+        <span class="tt">问题<span class="doty"></span>2</span>
+        <span class="tt">AI 任务<span class="dot"></span>1</span>
+        <span class="sp"></span>
+        <span style="font-size:10.5px;color:var(--tx3)">双击标签展开</span>
+      </div>
+    </div>
+
+    <aside class="ai">
+      <div class="aih">
+        <div class="aib"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+        <span class="t">AI 助手</span>
+        <span class="model">DeepSeek V4 · Flash<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sp"></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      </div>
+
+      <div class="ctx">
+        <span class="ctxl">上下文</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-git"/></svg>提交 8f2c1a9</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>2 个文件</span>
+        <span class="chip"><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
+      </div>
+
+      <div class="msgs">
+        <div class="ume">
+          <div class="who">你 · 08:34</div>
+          解释这次提交对页面的影响。
+        </div>
+
+        <div class="ai-row">
+          <div class="av"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+          <div class="aibody">
+            <div class="am"><span class="t">AI</span><span>08:34</span><span>·</span><span>已读取 8f2c1a9 与 2 个文件</span></div>
+            <div class="p">这次提交把卡片预览从内联写法抽成 <b>PreviewCard</b> 组件，并新增 1 个样式变量。改动只发生在视图层，没有对外 API 变化。</div>
+            <div class="box">
+              <div class="bi"><span class="b"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-file"/></svg></span><span>受影响页面：首页卡片、文档列表、设置页的预览卡</span></div>
+              <div class="bi"><span class="b"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg></span><span>回滚方式：撤销本次提交即可，无迁移脚本</span></div>
+              <div class="bi"><span class="b"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>测试仍覆盖悬停打开 / 离开关闭，回归即可</span></div>
+            </div>
+            <div class="follow">
+              <span class="fchip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>写发布说明</span>
+              <span class="fchip">对比上一提交</span>
+              <span class="fchip">检查回滚影响</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmp">
+        <div class="inp">
+          <div class="ph">继续问… 例如：这个提交和上一个提交的差异</div>
+        </div>
+        <div class="tools">
+          <span class="tool on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>读提交</span>
+          <span class="tool"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-term"/></svg>运行命令</span>
+          <span class="sp"></span>
+          <span class="tok2">13.6k / 128k</span>
+          <span class="send"><svg class="ic12" viewBox="0 0 24 24" style="color:#0a1220"><use href="#i-arrow-right"/></svg></span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="st">
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg>0</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>已同步</div>
+    <div class="sp"></div>
+    <div class="s"><span class="livedot"></span>AI 就绪</div>
+    <div class="s">Ln 87, Col 3</div>
+    <div class="s">空格: 2</div>
+    <div class="s">UTF-8</div>
+    <div class="s">LF</div>
+    <div class="s">Git 2.45</div>
+  </footer>
+
+  <div class="pop">
+    <div class="ph">切换分支<span class="sp"></span><svg class="ic12" viewBox="0 0 24 24" style="color:var(--tx3)"><use href="#i-close"/></svg></div>
+    <div class="sr"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索分支或远程</span></div>
+    <div class="pi on"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</span><span class="st"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>当前 · 领先 1</span></div>
+    <div class="pi"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>feat/preview-card</span><span class="st">领先 3</span></div>
+    <div class="pi"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>fix/theme-token</span><span class="st">落后 2</span></div>
+    <div class="pi"><span class="nm"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-globe"/></svg>origin/main</span><span class="st">远程</span></div>
+    <div class="pf"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-plus"/></svg>新建分支…<span class="sp" style="flex:1"></span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>拉取</div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><meta charset="utf-8"><title>轻码 IDE · 冲突解决</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#14181e; --panel2:#181d24; --elev:#1d232c; --aibg:#12161c;
+  --line:#252c37; --soft:rgba(255,255,255,.06);
+  --tx:#d9dee7; --tx2:#9aa4b2; --tx3:#68717f;
+  --ac:#5b9cff; --acsoft:rgba(91,156,255,.15);
+  --ai:#a78bfa; --aisoft:rgba(167,139,250,.12);
+  --ok:#3fbf9f; --warn:#e0b341; --err:#ef6b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font:13px/1.45 Inter,"Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg)}
+.app{display:flex;flex-direction:column;height:900px}
+.ic{width:16px;height:16px;display:block;flex:none}
+.ic12{width:12px;height:12px;display:block;flex:none}
+.ic14{width:14px;height:14px;display:block;flex:none}
+.ic20{width:20px;height:20px;display:block;flex:none}
+.titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tb-l{width:392px;display:flex;align-items:center;gap:9px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,#6aa8ff,#3d6ed8);display:grid;place-items:center;color:#0b1424;flex:none}
+.brand{font-size:13px;font-weight:600}
+.crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.chipb{display:flex;align-items:center;gap:4px;border:1px solid rgba(239,107,107,.5);border-radius:999px;padding:2px 7px;font-size:11px;color:#f1b3b3;background:rgba(239,107,107,.10)}
+.tb-c{width:420px;display:flex;justify-content:center;flex:none}
+.palette{width:420px;height:26px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--elev);color:var(--tx3);font-size:11.5px}
+.palette kbd{font:10.5px/1 "JetBrains Mono",Consolas,monospace;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--tx2);background:var(--panel2);margin-left:auto}
+.tb-r{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tbicon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--tx2)}
+.tbicon.on{background:var(--aisoft);color:var(--ai)}
+.ava{width:24px;height:24px;border-radius:50%;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;color:var(--tx2);font:600 10.5px Inter,sans-serif}
+.body{flex:1;display:flex;min-height:0}
+.actv{width:48px;flex:none;background:#11151a;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;gap:2px}
+.act{position:relative;width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:var(--tx3)}
+.act.on{color:#cfd8e6;background:var(--acsoft)}
+.act.on .ind{position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--ac)}
+.act .bd{position:absolute;right:3px;top:3px;min-width:14px;height:14px;border-radius:7px;background:var(--err);color:#0a1220;font:700 9px Inter,sans-serif;display:grid;place-items:center;padding:0 3px}
+.actv .sp{flex:1}
+.side{width:240px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{height:36px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px 0 14px;border-bottom:1px solid var(--soft)}
+.shead span{font-size:11px;letter-spacing:.06em;color:var(--tx2)}
+.shead .r{margin-left:auto;display:flex;gap:2px}
+.hb{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--tx3)}
+.merge{flex:none;margin:6px 8px;padding:7px 9px;border:1px solid rgba(239,107,107,.4);border-radius:6px;background:rgba(239,107,107,.08)}
+.merge .t{display:flex;align-items:center;gap:6px;font-size:11px;color:#f1b3b3}
+.merge .s{font-size:10px;color:var(--tx3);margin-top:3px}
+.grp{flex:none}
+.grp .gh{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;color:var(--tx2);border-top:1px solid var(--soft)}
+.grp .gh .cnt{margin-left:auto;font:600 10px "JetBrains Mono",monospace;color:var(--tx3)}
+.grp .row2{height:26px;display:flex;align-items:center;gap:6px;padding:0 10px 0 20px;font-size:12px;color:var(--tx2);white-space:nowrap}
+.grp .row2.on{background:rgba(239,107,107,.10);color:var(--tx);box-shadow:inset 2px 0 0 var(--err)}
+.grp .row2 .ci{flex:none;color:var(--tx3)}
+.grp .row2 .c{color:var(--err);font:700 10px "JetBrains Mono",monospace}
+.grp .row2 .btn2{margin-left:auto;font-size:9.5px;color:var(--err);border:1px solid rgba(239,107,107,.4);border-radius:3px;padding:0 4px}
+.grp .row2 .st{margin-left:auto;font:600 10px "JetBrains Mono",monospace;color:var(--warn)}
+.sfoot{margin-top:auto;height:28px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--soft)}
+.ed{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tabs{height:36px;flex:none;display:flex;align-items:stretch;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:var(--tx2);border-right:1px solid var(--line);white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 2px 0 var(--err)}
+.tab .x{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--tx3)}
+.tabs .sp{flex:1}
+.tabs .r{display:flex;align-items:center;gap:2px;padding:0 8px;border-left:1px solid var(--line)}
+.bc{height:28px;flex:none;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:var(--tx3);border-bottom:1px solid var(--soft)}
+.bc .r{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px}
+.hbar{height:36px;flex:none;display:flex;align-items:center;gap:10px;padding:0 10px;background:rgba(239,107,107,.06);border-bottom:1px solid var(--line)}
+.hbar .t{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#f1b3b3}
+.hbar .nav{display:flex;align-items:center;gap:2px;color:var(--tx3);font:10.5px "JetBrains Mono",monospace}
+.hbar .sp{flex:1}
+.btn{height:24px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:11px;color:var(--tx2);border:1px solid var(--line);background:var(--panel2);white-space:nowrap;flex:none;padding:0 8px}
+.btn.pri{background:var(--ok);border-color:var(--ok);color:#08231b;font-weight:600}
+.btn.warn{background:rgba(239,107,107,.12);border-color:rgba(239,107,107,.4);color:#f1b3b3}
+.conflict{flex:1;min-height:0;overflow:hidden;font:12px/18px "JetBrains Mono",Consolas,monospace;padding-top:4px}
+.ctx{height:18px;display:flex;white-space:nowrap}
+.ln{width:40px;flex:none;text-align:right;padding-right:10px;color:#4d5563;font-size:11px}
+.cd{flex:1;padding-right:8px;color:#9aa4b2;overflow:hidden}
+.card{border:1px solid rgba(239,107,107,.45);border-radius:8px;margin:6px 12px 6px 12px;overflow:hidden;background:rgba(239,107,107,.05)}
+.card .hd{height:28px;display:flex;align-items:center;gap:7px;padding:0 9px;font-size:11px;color:#f1b3b3;background:rgba(239,107,107,.09);border-bottom:1px solid rgba(239,107,107,.25)}
+.card .hd .n{font:600 10.5px "JetBrains Mono",monospace;color:var(--err)}
+.card .hd .sp{flex:1}
+.card .hd .why{font-size:10px;color:var(--tx3)}
+.panes{display:flex}
+.pane{flex:1;min-width:0;border-right:1px solid var(--soft)}
+.pane:last-child{border-right:0}
+.pane .ph{height:26px;display:flex;align-items:center;gap:6px;padding:0 9px;font-size:10.5px;color:var(--tx2);background:var(--panel2)}
+.pane .ph .tag{font-size:9px;border-radius:3px;padding:0 4px}
+.pane .ph .tag.cur{background:rgba(224,179,65,.15);color:var(--warn);border:1px solid rgba(224,179,65,.35)}
+.pane .ph .tag.in{background:rgba(63,191,159,.14);color:var(--ok);border:1px solid rgba(63,191,159,.35)}
+.pane .ph .sp{flex:1}
+.pane .ph .take{font-size:9.5px;color:var(--ac);border:1px solid rgba(91,156,255,.4);border-radius:3px;padding:0 5px}
+.pane .code{padding:2px 0}
+.pane .cl{display:flex;height:18px;line-height:18px;white-space:nowrap}
+.pane .cl .num{width:26px;flex:none;text-align:right;padding-right:6px;color:#4d5563;font-size:10px}
+.pane .cl .tx{flex:1;overflow:hidden;padding-right:6px;color:#d8dfe8}
+.pane .cl.del .tx{color:#f1b3b3}
+.pane .cl.add .tx{color:#a9e6d2}
+.pane .cl.hl{background:rgba(239,107,107,.08)}
+.acts{display:flex;align-items:center;gap:6px;padding:7px 9px;border-top:1px solid rgba(239,107,107,.25)}
+.acts .sp{flex:1}
+.bar{height:48px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line)}
+.bar .prog{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx2)}
+.bar .dots{display:flex;gap:4px}
+.bar .dot{width:18px;height:4px;border-radius:2px;background:var(--panel2)}
+.bar .dot.on{background:var(--ok)}
+.bar .sp{flex:1}
+.bar .hint{font-size:10.5px;color:var(--tx3)}
+.ai{width:380px;flex:none;background:var(--aibg);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.aih{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--line)}
+.aib{width:22px;height:22px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none}
+.aih .t{font-size:13px;font-weight:600}
+.model{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.aih .sp{flex:1}
+.ctxbar{height:34px;flex:none;display:flex;align-items:center;gap:5px;padding:0 10px;border-bottom:1px solid var(--soft);overflow:hidden}
+.ctxl{font-size:10.5px;color:var(--tx3);flex:none}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.msgs{flex:1;min-height:0;padding:12px 10px 6px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ume{align-self:flex-end;max-width:290px;background:var(--elev);border:1px solid var(--line);border-radius:10px 10px 2px 10px;padding:8px 10px;font-size:12px;line-height:18.5px;color:var(--tx)}
+.ume .who{font-size:10.5px;color:var(--tx3);margin-bottom:3px;text-align:right}
+.ai-row{display:flex;gap:8px}
+.av{width:20px;height:20px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none;margin-top:1px}
+.aibody{flex:1;min-width:0}
+.am{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:5px}
+.am .t{color:var(--tx2);font-weight:600;font-size:11px}
+.p{font-size:12px;line-height:19px;color:var(--tx2)}
+.p b{color:var(--tx);font-weight:600}
+.box{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.box .bi{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;font-size:11px;line-height:16px;color:var(--tx2);border-bottom:1px solid var(--soft)}
+.box .bi:last-child{border-bottom:0}
+.box .bi .b{flex:none;margin-top:1px}
+.icode{background:#0b0e13;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:10.5px/16px "JetBrains Mono",Consolas,monospace;color:#a9e6d2;margin:8px 0 6px}
+.follow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.fchip{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line);border-radius:999px;padding:3px 9px;font-size:10.5px;color:var(--tx2);white-space:nowrap}
+.cmp{flex:none;padding:9px 10px 11px;border-top:1px solid var(--line);background:var(--panel2)}
+.inp{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 9px}
+.inp .ph{font-size:12px;color:var(--tx3);line-height:18px;white-space:nowrap;overflow:hidden}
+.tools{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10.5px;color:var(--tx3)}
+.tool{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--tx2);background:var(--panel);white-space:nowrap}
+.tool.on{border-color:rgba(167,139,250,.45);color:#c9c0ee;background:var(--aisoft)}
+.tools .sp{flex:1}
+.tok2{color:var(--tx3);font:10.5px "JetBrains Mono",monospace;white-space:nowrap}
+.send{width:26px;height:26px;border-radius:50%;background:var(--ac);color:#0a1220;display:grid;place-items:center;flex:none}
+.st{height:24px;flex:none;background:#0c1015;border-top:1px solid var(--line);display:flex;align-items:center;gap:13px;padding:0 12px;font-size:10.5px;color:var(--tx3);overflow:hidden}
+.st .s{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st .sp{flex:1}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4l1.9 4.9 4.9 1.9-4.9 1.9L11 17.1l-1.9-4.9L4.2 10.2l4.9-1.9z" fill="currentColor"/><path d="M17.8 12.8l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 13h6"/><path d="M9 16h4"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.4"/><circle cx="8" cy="18" r="2.4"/><circle cx="16" cy="10.5" r="2.4"/><line x1="8" y1="8.4" x2="8" y2="15.6"/><path d="M16 12.9v1.4c0 1.9-1.6 3.3-3.7 3.3H10.4"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.6-3.6"/></g></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></g></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+<symbol id="i-cdown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></g></symbol>
+<symbol id="i-cright" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></g></symbol>
+<symbol id="i-cleft" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></g></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9"/><path d="M20 6.5V12h-5.5"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></g></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M9.5 7V5h5v2"/><path d="M6.5 7l1 13h9l1-13"/></g></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></g></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-4 5 4 5"/><path d="M15 7l4 5-4 5"/></g></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 4.5-8 4.5-8-4.5z"/><path d="M4 13l8 4.5 8-4.5"/><path d="M4 17.5l8 4.5 8-4.5"/></g></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.8l5 3.2-5 3.2z"/></g></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7.5 10.4l2.8 2.4-2.8 2.4"/><line x1="13" y1="15" x2="16.8" y2="15"/></g></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-panel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="14.8" y1="5" x2="14.8" y2="19"/></g></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h3"/><path d="M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.4 3.9-5 7-5s5.8 1.6 7 5"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6"/><path d="M12 16.4v.9"/></g></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></g></symbol>
+<symbol id="i-arrow-left" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></g></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h9a5 5 0 010 10H8"/><path d="M8 6l-4 4 4 4"/></g></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-l">
+      <div class="mark"><svg class="ic14" viewBox="0 0 24 24" style="color:#0b1424"><use href="#i-sparkles"/></svg></div>
+      <span class="brand">轻码</span>
+      <div class="crumb"><span>ada_case</span><span>/</span><span class="chipb"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>合并中</span></div>
+    </div>
+    <div class="tb-c">
+      <div class="palette"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索文件、命令与 AI 指令…</span><kbd>Ctrl K</kbd></div>
+    </div>
+    <div class="tb-r">
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-theme"/></svg></div>
+      <div class="tbicon on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+      <div class="ava">AY</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="actv">
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-file"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-search"/></svg></div>
+      <div class="act on"><span class="ind"></span><svg class="ic20" viewBox="0 0 24 24"><use href="#i-git"/></svg><span class="bd">2</span></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-play"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+      <div class="sp"></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+    </div>
+
+    <div class="side">
+      <div class="shead"><span>源代码管理</span>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="merge">
+        <div class="t"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>合并暂停</div>
+        <div class="s">feat/preview-card 合入 main · 解决后自动提交</div>
+      </div>
+
+      <div class="grp">
+        <div class="gh"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>冲突<span class="cnt">2</span></div>
+        <div class="row2 on"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>theme.css<span class="c">C</span><span class="btn2">解决</span></div>
+        <div class="row2"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>App.tsx<span class="c">C</span><span class="btn2">解决</span></div>
+      </div>
+
+      <div class="grp">
+        <div class="gh"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg>更改<span class="cnt">1</span></div>
+        <div class="row2"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>README.md<span class="st">+2</span></div>
+      </div>
+
+      <div class="sfoot"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>解决后自动暂存 · 提交保持锁定</div>
+    </div>
+
+    <div class="ed">
+      <div class="tabs">
+        <div class="tab on"><svg class="ic14" viewBox="0 0 24 24" style="color:#f1b3b3"><use href="#i-alert"/></svg>合并 · theme.css<span class="x"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-close"/></svg></span></div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#9dc0e6"><use href="#i-code"/></svg>App.tsx<span class="x"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg></span></div>
+        <div class="sp"></div>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="bc">
+        <span>main</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span>styles</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span style="color:var(--tx2)">theme.css · 冲突 2</span>
+        <div class="r"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg><span>AI 已对比两侧</span></div>
+      </div>
+
+      <div class="hbar">
+        <div class="t"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>2 处冲突</div>
+        <div class="nav"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cleft"/></svg>1 / 2<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg></div>
+        <div class="sp"></div>
+        <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-code"/></svg>打开完整差异</span>
+        <span class="btn pri"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>标记为已解决</span>
+      </div>
+
+      <div class="conflict">
+        <div class="ctx"><span class="ln">84</span><span class="cd">.pcard {</span></div>
+        <div class="ctx"><span class="ln">85</span><span class="cd">  border-radius: 8px;</span></div>
+
+        <div class="card">
+          <div class="hd"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg><span class="n">冲突 1 / 2</span><span style="color:var(--tx3)">第 86–89 行</span><span class="sp"></span><span class="why">两侧都改了背景变量</span></div>
+          <div class="panes">
+            <div class="pane">
+              <div class="ph"><span class="tag cur">当前 main</span><span>你 · 08:12</span><span class="sp"></span><span class="take">采用</span></div>
+              <div class="code">
+                <div class="cl del"><span class="num">86</span><span class="tx">.pcard-pop {</span></div>
+                <div class="cl del"><span class="num">87</span><span class="tx">  background: var(--panel-weak);</span></div>
+                <div class="cl del"><span class="num">88</span><span class="tx">  border: 1px solid var(--line);</span></div>
+                <div class="cl del"><span class="num">89</span><span class="tx">}</span></div>
+              </div>
+            </div>
+            <div class="pane">
+              <div class="ph"><span class="tag in">传入 feat/preview-card</span><span>AI · 08:16</span><span class="sp"></span><span class="take">采用</span></div>
+              <div class="code">
+                <div class="cl add"><span class="num">86</span><span class="tx">.pcard-pop {</span></div>
+                <div class="cl add"><span class="num">87</span><span class="tx">  background: var(--surface-2);</span></div>
+                <div class="cl add"><span class="num">88</span><span class="tx">  box-shadow: 0 0 0 1px var(--card-ring);</span></div>
+                <div class="cl add"><span class="num">89</span><span class="tx">}</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="acts">
+            <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>采用当前</span>
+            <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>采用传入</span>
+            <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-plus"/></svg>采用两者</span>
+            <span class="sp"></span>
+            <span class="btn"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg>让 AI 说明差异</span>
+          </div>
+        </div>
+
+        <div class="ctx"><span class="ln">90</span><span class="cd">.pcard-pop:hover {</span></div>
+        <div class="ctx"><span class="ln">91</span><span class="cd">  transform: translateY(-2px);</span></div>
+        <div class="ctx"><span class="ln">92</span><span class="cd">}</span></div>
+
+        <div class="card" style="opacity:.92">
+          <div class="hd"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg><span class="n">冲突 2 / 2</span><span style="color:var(--tx3)">第 104–110 行</span><span class="sp"></span><span class="why">删除与修改冲突</span></div>
+          <div class="acts" style="border-top:0">
+            <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>展开这一处</span>
+            <span class="sp"></span>
+            <span style="font-size:10px;color:var(--tx3)">当前删除 · 传入保留并改写</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="bar">
+        <div class="prog">已解决 0 / 2<div class="dots"><span class="dot"></span><span class="dot"></span></div></div>
+        <div class="sp"></div>
+        <span class="hint">提交在 2 个冲突全部解决后才可用</span>
+        <span class="btn warn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-undo"/></svg>放弃合并</span>
+        <span class="btn" style="opacity:.55"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>提交</span>
+      </div>
+    </div>
+
+    <aside class="ai">
+      <div class="aih">
+        <div class="aib"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+        <span class="t">AI 助手</span>
+        <span class="model">DeepSeek V4 · Flash<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sp"></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      </div>
+
+      <div class="ctxbar">
+        <span class="ctxl">上下文</span>
+        <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>冲突 2 处</span>
+        <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-file"/></svg>theme.css</span>
+        <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
+      </div>
+
+      <div class="msgs">
+        <div class="ume">
+          <div class="who">你 · 08:41</div>
+          这两处冲突，哪个更安全？
+        </div>
+
+        <div class="ai-row">
+          <div class="av"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+          <div class="aibody">
+            <div class="am"><span class="t">AI</span><span>08:41</span><span>·</span><span>对比两侧 · 2 处冲突</span></div>
+            <div class="p">冲突 1 是变量重命名：main 用 <b>--panel-weak</b>，分支换成 <b>--surface-2</b> 并新增 ring。建议<strong>采用传入</strong>，ring 是这次设计的意图。</div>
+            <div class="icode">background: var(--surface-2);
+box-shadow: 0 0 0 1px var(--card-ring);</div>
+            <div class="p">冲突 2 是「删除与修改」：建议保留传入的改写，再手工确认被删的两行确实不再被引用。</div>
+            <div class="box">
+              <div class="bi"><span class="b" style="color:var(--warn)"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg></span><span>AI 不会替你合并：点「采用」后会写入并标记已解决</span></div>
+            </div>
+            <div class="follow">
+              <span class="fchip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>解释冲突 2</span>
+              <span class="fchip">检查被删引用</span>
+              <span class="fchip">放弃合并怎么回滚</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmp">
+        <div class="inp">
+          <div class="ph">继续问… 例如：采用两者会不会重复声明</div>
+        </div>
+        <div class="tools">
+          <span class="tool on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>读冲突</span>
+          <span class="tool"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-term"/></svg>运行命令</span>
+          <span class="sp"></span>
+          <span class="tok2">14.2k / 128k</span>
+          <span class="send"><svg class="ic12" viewBox="0 0 24 24" style="color:#0a1220"><use href="#i-arrow-right"/></svg></span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="st">
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>合并中</div>
+    <div class="s">已解决 0 / 2</div>
+    <div class="sp"></div>
+    <div class="s"><span class="livedot"></span>AI 就绪</div>
+    <div class="s">Ln 87, Col 3</div>
+    <div class="s">空格: 2</div>
+    <div class="s">UTF-8</div>
+    <div class="s">LF</div>
+    <div class="s">Git 2.45</div>
+  </footer>
+</div>
+</body></html>

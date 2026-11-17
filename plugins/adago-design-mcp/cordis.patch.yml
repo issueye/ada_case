@@ -1,0 +1,9 @@
+- insert:
+    - id: adago-design-mcp
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: adago_design
+        transport: streamable-http
+        url: http://127.0.0.1:8788/mcp
+        startupTimeoutMs: 30000
+        failOnStartupError: false

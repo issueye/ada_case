@@ -1,0 +1,7 @@
+{
+  "meta": {
+    "title": "Adago design MCP connection",
+    "description": "Connects the local adago-design MCP server at http://127.0.0.1:8788/mcp and registers its design-system, token, canvas, icon, logo, and export tools as mcp__adago_design__* tools for the agent. Ask for a design-system comparison, a component preview, a whole screen, an icon, or a canvas export to use them. The server must be running on that port; when it is offline at startup the harness still starts and the connection retries automatically. Turning the bundle off removes every adago_design tool until it is turned on again.",
+    "detail": "docs/DETAIL.md"
+  }
+}

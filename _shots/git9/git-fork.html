@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><meta charset="utf-8"><title>轻码 IDE · 推送被拒与分叉</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#14181e; --panel2:#181d24; --elev:#1d232c; --aibg:#12161c;
+  --line:#252c37; --soft:rgba(255,255,255,.06);
+  --tx:#d9dee7; --tx2:#9aa4b2; --tx3:#68717f;
+  --ac:#5b9cff; --acsoft:rgba(91,156,255,.15);
+  --ai:#a78bfa; --aisoft:rgba(167,139,250,.12);
+  --ok:#3fbf9f; --warn:#e0b341; --err:#ef6b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font:13px/1.45 Inter,"Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg)}
+.app{display:flex;flex-direction:column;height:900px}
+.ic{width:16px;height:16px;display:block;flex:none}
+.ic12{width:12px;height:12px;display:block;flex:none}
+.ic14{width:14px;height:14px;display:block;flex:none}
+.ic20{width:20px;height:20px;display:block;flex:none}
+kbd{font:10.5px/1 "JetBrains Mono",Consolas,monospace;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--tx2);background:var(--panel2)}
+.titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tb-l{width:392px;display:flex;align-items:center;gap:9px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,#6aa8ff,#3d6ed8);display:grid;place-items:center;color:#0b1424;flex:none}
+.brand{font-size:13px;font-weight:600}
+.crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.chipb{display:flex;align-items:center;gap:4px;border:1px solid rgba(239,107,107,.5);border-radius:999px;padding:2px 7px;font-size:11px;color:#f1b3b3;background:rgba(239,107,107,.10)}
+.tb-c{width:420px;display:flex;justify-content:center;flex:none}
+.palette{width:420px;height:26px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--elev);color:var(--tx3);font-size:11.5px}
+.palette kbd{margin-left:auto;background:transparent}
+.tb-r{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tbicon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--tx2)}
+.tbicon.on{background:var(--aisoft);color:var(--ai)}
+.ava{width:24px;height:24px;border-radius:50%;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;color:var(--tx2);font:600 10.5px Inter,sans-serif}
+.body{flex:1;display:flex;min-height:0}
+.actv{width:48px;flex:none;background:#11151a;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;gap:2px}
+.act{position:relative;width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:var(--tx3)}
+.act.on{color:#cfd8e6;background:var(--acsoft)}
+.act.on .ind{position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--ac)}
+.act .err{position:absolute;right:5px;top:5px;width:6px;height:6px;border-radius:50%;background:var(--err)}
+.actv .sp{flex:1}
+.side{width:240px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{height:36px;flex:none;display:flex;align-items:center;gap:2px;padding:0 8px 0 14px;border-bottom:1px solid var(--soft)}
+.shead span{font-size:11px;letter-spacing:.06em;color:var(--tx2)}
+.shead .r{margin-left:auto;display:flex;gap:2px}
+.hb{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--tx3)}
+.banner{flex:none;margin:6px 8px;padding:7px 9px;border:1px solid rgba(239,107,107,.4);border-radius:6px;background:rgba(239,107,107,.08)}
+.banner .t{display:flex;align-items:center;gap:6px;font-size:11px;color:#f1b3b3}
+.banner .s{font-size:10px;color:var(--tx3);margin-top:3px;line-height:14px}
+.banner .acts{display:flex;gap:5px;margin-top:7px}
+.btn{height:22px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:4px;font-size:10px;color:var(--tx2);border:1px solid var(--line);background:var(--panel2);white-space:nowrap;flex:none;padding:0 7px}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#0a1220;font-weight:600}
+.btn.danger{background:rgba(239,107,107,.12);border-color:rgba(239,107,107,.4);color:#f1b3b3}
+.branchbar{height:30px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;border-top:1px solid var(--soft);border-bottom:1px solid var(--soft);font-size:11.5px}
+.branchbar .b{display:flex;align-items:center;gap:5px;color:var(--tx)}
+.branchbar .sync{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--tx3);font:10.5px "JetBrains Mono",monospace}
+.branchbar .sync .s{display:flex;align-items:center;gap:2px}
+.branchbar .sync .s.down{color:#f1b3b3}
+.empty{flex:none;margin:14px 10px;padding:14px 10px;border:1px dashed var(--line);border-radius:8px;text-align:center;color:var(--tx3);font-size:10.5px;line-height:16px}
+.empty .dot{width:24px;height:24px;border-radius:50%;background:rgba(63,191,159,.15);color:var(--ok);display:grid;place-items:center;margin:0 auto 8px}
+.sec{height:26px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--soft);margin-top:2px}
+.sec .cnt{margin-left:auto;font:600 10px "JetBrains Mono",monospace}
+.recent{flex:none}
+.r2{height:30px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:11px;color:var(--tx2);white-space:nowrap}
+.r2 .h{font:10px "JetBrains Mono",monospace;color:var(--tx3)}
+.r2 .t{margin-left:auto;font-size:10px;color:var(--tx3)}
+.r2.new{color:var(--tx)}
+.r2.new .h{color:var(--ac)}
+.sfoot{margin-top:auto;height:28px;flex:none;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10.5px;color:var(--tx3);border-top:1px solid var(--soft)}
+.ed{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tabs{height:36px;flex:none;display:flex;align-items:stretch;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:var(--tx2);border-right:1px solid var(--line);white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 2px 0 var(--err)}
+.tab .x{width:16px;height:16px;display:grid;place-items:center;border-radius:4px;color:var(--tx3)}
+.tabs .sp{flex:1}
+.tabs .r{display:flex;align-items:center;gap:2px;padding:0 8px;border-left:1px solid var(--line)}
+.bc{height:28px;flex:none;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:var(--tx3);border-bottom:1px solid var(--soft)}
+.bc .r{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:11px}
+.hbar{height:38px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;background:rgba(239,107,107,.06);border-bottom:1px solid var(--line)}
+.hbar .t{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#f1b3b3}
+.hbar .sp{flex:1}
+.fork{flex:1;min-height:0;padding:14px 16px;display:flex;flex-direction:column;gap:0}
+.lanes{display:flex;gap:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.lane{flex:1;min-width:0;padding:10px 12px}
+.lane + .lane{border-left:1px solid var(--line)}
+.lt{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:8px}
+.lt .cnt{margin-left:auto;font:600 10px "JetBrains Mono",monospace}
+.cmt{position:relative;padding:7px 8px 7px 20px;margin-bottom:6px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);font-size:11px;color:var(--tx2)}
+.cmt::before{content:"";position:absolute;left:8px;top:50%;transform:translateY(-50%);width:7px;height:7px;border-radius:50%;background:var(--tx3)}
+.cmt.local::before{background:var(--ac)}
+.cmt.remote::before{background:var(--ok)}
+.cmt .h{font:10px "JetBrains Mono",monospace;color:var(--tx3);margin-right:4px}
+.cmt .by{display:block;font-size:9.5px;color:var(--tx3);margin-top:2px}
+.base{display:flex;align-items:center;gap:6px;margin-top:4px;padding:7px 10px;border:1px dashed var(--line);border-radius:6px;font-size:10.5px;color:var(--tx3)}
+.base .dot{width:7px;height:7px;border-radius:50%;background:var(--tx3)}
+.hint{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:10.5px;color:var(--tx3)}
+.hint .k{border:1px solid var(--line);border-radius:4px;padding:1px 6px;background:var(--panel2);color:var(--tx2);font:10px "JetBrains Mono",monospace}
+.decide{margin-top:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.decide .dh{height:28px;display:flex;align-items:center;gap:6px;padding:0 10px;font-size:10.5px;color:var(--tx2);border-bottom:1px solid var(--soft);background:var(--panel2)}
+.decide .drow{display:flex;align-items:center;gap:9px;padding:8px 10px;border-bottom:1px solid var(--soft);font-size:11px;color:var(--tx2)}
+.decide .drow:last-child{border-bottom:0}
+.decide .tag{font-size:9px;border-radius:3px;padding:1px 5px;flex:none}
+.decide .tag.ok{color:var(--ok);background:rgba(63,191,159,.12);border:1px solid rgba(63,191,159,.35)}
+.decide .tag.warn{color:var(--warn);background:rgba(224,179,65,.12);border:1px solid rgba(224,179,65,.35)}
+.decide .tag.err{color:var(--err);background:rgba(239,107,107,.12);border:1px solid rgba(239,107,107,.35)}
+.decide .nm{color:var(--tx);font-weight:600;flex:none}
+.decide .ds{flex:1;color:var(--tx3);font-size:10.5px}
+.bar{height:48px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-top:1px solid var(--line)}
+.bar .t{font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:6px}
+.bar .sp{flex:1}
+.ai{width:380px;flex:none;background:var(--aibg);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.aih{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--line)}
+.aib{width:22px;height:22px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none}
+.aih .t{font-size:13px;font-weight:600}
+.model{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.aih .sp{flex:1}
+.ctx{height:34px;flex:none;display:flex;align-items:center;gap:5px;padding:0 10px;border-bottom:1px solid var(--soft);overflow:hidden}
+.ctxl{font-size:10.5px;color:var(--tx3);flex:none}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.msgs{flex:1;min-height:0;padding:12px 10px 6px 12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ume{align-self:flex-end;max-width:290px;background:var(--elev);border:1px solid var(--line);border-radius:10px 10px 2px 10px;padding:8px 10px;font-size:12px;line-height:18.5px;color:var(--tx)}
+.ume .who{font-size:10.5px;color:var(--tx3);margin-bottom:3px;text-align:right}
+.ai-row{display:flex;gap:8px}
+.av{width:20px;height:20px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none;margin-top:1px}
+.aibody{flex:1;min-width:0}
+.am{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:5px}
+.am .t{color:var(--tx2);font-weight:600;font-size:11px}
+.p{font-size:12px;line-height:19px;color:var(--tx2)}
+.p b{color:var(--tx);font-weight:600}
+.box{margin:8px 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.box .bi{display:flex;align-items:flex-start;gap:7px;padding:6px 9px;font-size:11px;line-height:16px;color:var(--tx2);border-bottom:1px solid var(--soft)}
+.box .bi:last-child{border-bottom:0}
+.box .bi .b{flex:none;margin-top:1px}
+.follow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.fchip{display:inline-flex;align-items:center;gap:4px;border:1px dashed var(--line);border-radius:999px;padding:3px 9px;font-size:10.5px;color:var(--tx2);white-space:nowrap}
+.cmp{flex:none;padding:9px 10px 11px;border-top:1px solid var(--line);background:var(--panel2)}
+.inp{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 9px}
+.inp .ph{font-size:12px;color:var(--tx3);line-height:18px;white-space:nowrap;overflow:hidden}
+.tools{display:flex;align-items:center;gap:5px;margin-top:8px;font-size:10.5px;color:var(--tx3)}
+.tool{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--tx2);background:var(--panel);white-space:nowrap}
+.tool.on{border-color:rgba(167,139,250,.45);color:#c9c0ee;background:var(--aisoft)}
+.tools .sp{flex:1}
+.tok2{color:var(--tx3);font:10.5px "JetBrains Mono",monospace;white-space:nowrap}
+.send{width:26px;height:26px;border-radius:50%;background:var(--ac);color:#0a1220;display:grid;place-items:center;flex:none}
+.st{height:24px;flex:none;background:#0c1015;border-top:1px solid var(--line);display:flex;align-items:center;gap:13px;padding:0 12px;font-size:10.5px;color:var(--tx3);overflow:hidden}
+.st .s{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st .sp{flex:1}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4l1.9 4.9 4.9 1.9-4.9 1.9L11 17.1l-1.9-4.9L4.2 10.2l4.9-1.9z" fill="currentColor"/><path d="M17.8 12.8l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 13h6"/><path d="M9 16h4"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.4"/><circle cx="8" cy="18" r="2.4"/><circle cx="16" cy="10.5" r="2.4"/><line x1="8" y1="8.4" x2="8" y2="15.6"/><path d="M16 12.9v1.4c0 1.9-1.6 3.3-3.7 3.3H10.4"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.6-3.6"/></g></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></g></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+<symbol id="i-cdown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></g></symbol>
+<symbol id="i-cright" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></g></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9"/><path d="M20 6.5V12h-5.5"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></g></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></g></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-4 5 4 5"/><path d="M15 7l4 5-4 5"/></g></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 4.5-8 4.5-8-4.5z"/><path d="M4 13l8 4.5 8-4.5"/><path d="M4 17.5l8 4.5 8-4.5"/></g></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.8l5 3.2-5 3.2z"/></g></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7.5 10.4l2.8 2.4-2.8 2.4"/><line x1="13" y1="15" x2="16.8" y2="15"/></g></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-panel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="14.8" y1="5" x2="14.8" y2="19"/></g></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h3"/><path d="M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.4 3.9-5 7-5s5.8 1.6 7 5"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6"/><path d="M12 16.4v.9"/></g></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></g></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10h9a5 5 0 010 10H8"/><path d="M8 6l-4 4 4 4"/></g></symbol>
+<symbol id="i-globe" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.4 2.4 3.6 5.4 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.4-3.6-8.5s1.2-6.1 3.6-8.5z"/></g></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-l">
+      <div class="mark"><svg class="ic14" viewBox="0 0 24 24" style="color:#0b1424"><use href="#i-sparkles"/></svg></div>
+      <span class="brand">轻码</span>
+      <div class="crumb"><span>ada_case</span><span>/</span><span class="chipb"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>分叉</span></div>
+    </div>
+    <div class="tb-c">
+      <div class="palette"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索文件、命令与 AI 指令…</span><kbd>Ctrl K</kbd></div>
+    </div>
+    <div class="tb-r">
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-theme"/></svg></div>
+      <div class="tbicon on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+      <div class="ava">AY</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="actv">
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-file"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-search"/></svg></div>
+      <div class="act on"><span class="ind"></span><svg class="ic20" viewBox="0 0 24 24"><use href="#i-git"/></svg><span class="err"></span></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-play"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+      <div class="sp"></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+    </div>
+
+    <div class="side">
+      <div class="shead"><span>源代码管理</span>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-refresh"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="banner">
+        <div class="t"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>推送被拒 · 远程有新提交</div>
+        <div class="s">origin/main 领先 2，本地领先 1，历史已分叉。</div>
+        <div class="acts"><span class="btn pri">拉取并重试</span><span class="btn">查看远程</span></div>
+      </div>
+
+      <div class="branchbar">
+        <span class="b"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-git"/></svg>main<svg class="ic12" viewBox="0 0 24 24" style="color:var(--tx3)"><use href="#i-cdown"/></svg></span>
+        <div class="sync">
+          <span class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</span>
+          <span class="s down"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg>2</span>
+        </div>
+      </div>
+
+      <div class="empty"><div class="dot"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-check"/></svg></div>没有待提交的更改<br>最新提交已创建，等待推送</div>
+
+      <div class="sec"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-clock"/></svg>最近提交<span class="cnt">3</span></div>
+      <div class="recent">
+        <div class="r2 new"><span class="h">8f2c1a9</span><span>抽成 PreviewCard 组件</span><span class="t">08:12</span></div>
+        <div class="r2"><span class="h">b41d7e0</span><span>主题色变量</span><span class="t">08:20</span></div>
+        <div class="r2"><span class="h">9ac02f1</span><span>更新 README</span><span class="t">08:26</span></div>
+      </div>
+
+      <div class="sfoot"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-globe"/></svg>origin/main · 已拉取 08:30</div>
+    </div>
+
+    <div class="ed">
+      <div class="tabs">
+        <div class="tab on"><svg class="ic14" viewBox="0 0 24 24" style="color:#f1b3b3"><use href="#i-alert"/></svg>分叉 · main / origin/main<span class="x"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-close"/></svg></span></div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#9dc0e6"><use href="#i-code"/></svg>App.tsx</div>
+        <div class="sp"></div>
+        <div class="r">
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+          <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div>
+        </div>
+      </div>
+
+      <div class="bc">
+        <span>main</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span>origin/main</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg>
+        <span style="color:var(--tx2)">分叉</span>
+        <div class="r"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai)"><use href="#i-sparkles"/></svg><span>AI 已读取两边提交</span></div>
+      </div>
+
+      <div class="hbar">
+        <div class="t"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>历史已分叉 · 本地 1 / 远程 2</div>
+        <div class="sp"></div>
+        <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-refresh"/></svg>先拉取</span>
+        <span class="btn danger"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>强制推送</span>
+      </div>
+
+      <div class="fork">
+        <div class="lanes">
+          <div class="lane">
+            <div class="lt"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>本地 main<span class="cnt">1</span></div>
+            <div class="cmt local"><span class="h">8f2c1a9</span>抽成 PreviewCard 组件<span class="by">你 · 08:12 · 已提交，未推送</span></div>
+            <div class="cmt" style="opacity:.55;border-style:dashed">等待合并或变基</div>
+          </div>
+          <div class="lane">
+            <div class="lt"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-globe"/></svg>origin/main<span class="cnt">2</span></div>
+            <div class="cmt remote"><span class="h">b41d7e0</span>主题色变量改用 --surface-2<span class="by">队友 · 08:20 · 已推送</span></div>
+            <div class="cmt remote"><span class="h">9ac02f1</span>更新 README 与截图<span class="by">队友 · 08:26 · 已推送</span></div>
+          </div>
+        </div>
+        <div class="base"><span class="dot"></span>共同祖先 77e8d21 · 添加终端与状态栏</div>
+        <div class="hint"><span>推荐先拉取：<b style="color:var(--tx2)">拉取并合并</b>保留两边的提交</span><span class="k">Enter</span><span class="k">Esc</span> 取消</div>
+        <div class="decide">
+          <div class="dh"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>三种处理方式</div>
+          <div class="drow"><span class="tag ok">推荐</span><span class="nm">拉取并合并</span><span class="ds">保留两边提交，产生一个合并提交；本次两处改动不重叠，无冲突</span><span class="k">Enter</span></div>
+          <div class="drow"><span class="tag warn">谨慎</span><span class="nm">拉取并变基</span><span class="ds">历史更直，但会改写你的提交；共享分支不建议</span></div>
+          <div class="drow"><span class="tag err">危险</span><span class="nm">强制推送</span><span class="ds">会覆盖远程 2 个提交，需要输入分支名二次确认</span></div>
+        </div>
+      </div>
+
+      <div class="bar">
+        <div class="t"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--warn)"><use href="#i-alert"/></svg>本地领先 1 · 远程领先 2，直接推送会被拒绝</div>
+        <div class="sp"></div>
+        <span class="btn"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-code"/></svg>查看差异</span>
+        <span class="btn pri"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg>拉取并合并</span>
+      </div>
+    </div>
+
+    <aside class="ai">
+      <div class="aih">
+        <div class="aib"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+        <span class="t">AI 助手</span>
+        <span class="model">DeepSeek V4 · Flash<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sp"></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      </div>
+
+      <div class="ctx">
+        <span class="ctxl">上下文</span>
+        <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>分叉</span>
+        <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-globe"/></svg>origin/main</span>
+        <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-plus"/></svg></span>
+      </div>
+
+      <div class="msgs">
+        <div class="ume">
+          <div class="who">你 · 08:33</div>
+          为什么推不上去？我该合并还是变基？
+        </div>
+
+        <div class="ai-row">
+          <div class="av"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+          <div class="aibody">
+            <div class="am"><span class="t">AI</span><span>08:33</span><span>·</span><span>读取 3 个提交 · 2 条远程</span></div>
+            <div class="p">你提交后，远程又进了 2 个提交，历史从共同祖先分叉，所以推送被拒绝。两边改的不是同一批文件。</div>
+            <div class="box">
+              <div class="bi"><span class="b" style="color:var(--ok)"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg></span><span>拉取并合并：保留两条历史，最安全；本次不会产生冲突</span></div>
+              <div class="bi"><span class="b" style="color:var(--warn)"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg></span><span>拉取并变基：历史更直，但会改写你的提交；共享分支不建议</span></div>
+              <div class="bi"><span class="b" style="color:var(--err)"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg></span><span>强制推送：会覆盖队友的 2 个提交，仅在个人分支使用</span></div>
+            </div>
+            <div class="follow">
+              <span class="fchip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>解释 b41d7e0</span>
+              <span class="fchip">会冲突吗</span>
+              <span class="fchip">变基后怎么回滚</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cmp">
+        <div class="inp">
+          <div class="ph">继续问… 例如：合并后要不要补测试</div>
+        </div>
+        <div class="tools">
+          <span class="tool on"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>读提交</span>
+          <span class="tool"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-term"/></svg>运行命令</span>
+          <span class="sp"></span>
+          <span class="tok2">13.9k / 128k</span>
+          <span class="send"><svg class="ic12" viewBox="0 0 24 24" style="color:#0a1220"><use href="#i-arrow-right"/></svg></span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="st">
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</div>
+    <div class="s" style="color:#f1b3b3"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg>2</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-alert"/></svg>分叉</div>
+    <div class="sp"></div>
+    <div class="s"><span class="livedot"></span>AI 就绪</div>
+    <div class="s">Ln 1, Col 1</div>
+    <div class="s">空格: 2</div>
+    <div class="s">UTF-8</div>
+    <div class="s">LF</div>
+    <div class="s">Git 2.45</div>
+  </footer>
+</div>
+</body></html>

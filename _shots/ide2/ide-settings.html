@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><meta charset="utf-8"><title>轻码 IDE · 设置</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#14181e; --panel2:#181d24; --elev:#1d232c; --aibg:#12161c;
+  --line:#252c37; --soft:rgba(255,255,255,.06);
+  --tx:#d9dee7; --tx2:#9aa4b2; --tx3:#68717f;
+  --ac:#5b9cff; --acsoft:rgba(91,156,255,.15);
+  --ai:#a78bfa; --aisoft:rgba(167,139,250,.12);
+  --ok:#3fbf9f; --warn:#e0b341; --err:#ef6b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font:13px/1.45 Inter,"Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg)}
+.app{display:flex;flex-direction:column;height:900px}
+.ic{width:16px;height:16px;display:block;flex:none}
+.ic12{width:12px;height:12px;display:block;flex:none}
+.ic14{width:14px;height:14px;display:block;flex:none}
+.ic20{width:20px;height:20px;display:block;flex:none}
+kbd{font:10.5px/1 "JetBrains Mono",Consolas,monospace;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--tx2);background:var(--panel2)}
+.titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tb-l{width:392px;display:flex;align-items:center;gap:9px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,#6aa8ff,#3d6ed8);display:grid;place-items:center;color:#0b1424;flex:none}
+.brand{font-size:13px;font-weight:600}
+.crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.chipb{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;color:var(--tx2);background:var(--panel2)}
+.tb-c{width:420px;display:flex;justify-content:center;flex:none}
+.palette{width:420px;height:26px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--elev);color:var(--tx3);font-size:11.5px}
+.palette kbd{margin-left:auto;background:transparent}
+.tb-r{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tbicon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--tx2)}
+.tbicon.on{background:var(--aisoft);color:var(--ai)}
+.ava{width:24px;height:24px;border-radius:50%;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;color:var(--tx2);font:600 10.5px Inter,sans-serif}
+.body{flex:1;display:flex;min-height:0}
+.actv{width:48px;flex:none;background:#11151a;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;gap:2px}
+.act{position:relative;width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:var(--tx3)}
+.act.on{color:#cfd8e6;background:var(--acsoft)}
+.act.on .ind{position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--ac)}
+.actv .sp{flex:1}
+.side{width:240px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{height:36px;flex:none;display:flex;align-items:center;padding:0 8px 0 14px;border-bottom:1px solid var(--soft)}
+.shead span{font-size:11px;letter-spacing:.06em;color:var(--tx2)}
+.srch{margin:8px 10px;display:flex;align-items:center;gap:6px;padding:5px 8px;border:1px solid var(--line);border-radius:5px;background:var(--panel2);font-size:11px;color:var(--tx3)}
+.nav{padding:2px 8px;display:flex;flex-direction:column;gap:1px}
+.item{height:32px;display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:5px;font-size:12px;color:var(--tx2)}
+.item.on{background:var(--acsoft);color:var(--tx);box-shadow:inset 2px 0 0 var(--ac)}
+.item .ci{color:var(--tx3);flex:none}
+.item.on .ci{color:var(--ac)}
+.ver{margin-top:auto;padding:8px 12px;border-top:1px solid var(--soft);font-size:10.5px;color:var(--tx3)}
+.ed{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tabs{height:36px;flex:none;display:flex;align-items:stretch;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:var(--tx2);border-right:1px solid var(--line);white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 2px 0 var(--ac)}
+.tabs .sp{flex:1}
+.tabs .r{display:flex;align-items:center;gap:2px;padding:0 8px;border-left:1px solid var(--line)}
+.hb{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--tx3)}
+.set{padding:18px 26px 0;overflow:hidden;flex:1}
+.sthead{display:flex;align-items:center;gap:10px}
+.sthead h1{font-size:18px;font-weight:700}
+.sthead .chip{margin-left:auto;display:inline-flex;align-items:center;gap:5px;border:1px solid rgba(63,191,159,.35);background:rgba(63,191,159,.10);color:#a9e6d2;border-radius:999px;padding:3px 9px;font-size:10.5px}
+.sthead .search{margin-top:0}
+.stsearch{display:flex;align-items:center;gap:7px;margin-top:12px;height:30px;padding:0 10px;border:1px solid var(--line);border-radius:6px;background:var(--elev);color:var(--tx3);font-size:11.5px}
+.stsearch kbd{margin-left:auto;background:transparent}
+.sec2{margin-top:16px}
+.sec2 .t{font-size:12px;font-weight:650;color:var(--tx);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.sec2 .t .cnt{font:600 9.5px Inter,sans-serif;color:var(--tx3);border:1px solid var(--line);border-radius:999px;padding:0 5px}
+.rows{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.row{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;border-bottom:1px solid var(--soft)}
+.row:last-child{border-bottom:0}
+.row .l{flex:1;min-width:0}
+.row .l b{font-size:11.5px;color:var(--tx);font-weight:600;display:block}
+.row .l span{font-size:10px;color:var(--tx3);display:block;margin-top:1px}
+.ctl{flex:none;display:flex;align-items:center;gap:6px}
+.seg{display:flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.seg span{padding:3px 9px;font-size:10.5px;color:var(--tx3)}
+.seg span.on{background:var(--elev);color:var(--tx)}
+.step{display:flex;align-items:center;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.step span{width:22px;height:22px;display:grid;place-items:center;color:var(--tx3);font-size:12px}
+.step .v{width:34px;justify-content:center;font:10.5px "JetBrains Mono",monospace;color:var(--tx);border-left:1px solid var(--line);border-right:1px solid var(--line)}
+.sel{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:5px;padding:3px 8px;font-size:10.5px;color:var(--tx2);background:var(--panel2);min-width:124px}
+.sel .sp{flex:1}
+.sel .ci{color:var(--tx3)}
+.tg{width:32px;height:18px;border-radius:9px;background:var(--ac);position:relative;flex:none}
+.tg i{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#0a1220}
+.tg.off{background:var(--panel2);border:1px solid var(--line)}
+.tg.off i{left:2px;right:auto;background:var(--tx3)}
+.tg.lock{background:rgba(91,156,255,.35)}
+.swatch{display:flex;gap:5px}
+.swatch .s{width:16px;height:16px;border-radius:4px;border:1px solid rgba(255,255,255,.15)}
+.swatch .s.on{box-shadow:0 0 0 2px rgba(91,156,255,.5)}
+.ai{width:380px;flex:none;background:var(--aibg);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.aih{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--line)}
+.aib{width:22px;height:22px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none}
+.aih .t{font-size:13px;font-weight:600}
+.model{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.aih .sp{flex:1}
+.msgs{flex:1;min-height:0;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ume{align-self:flex-end;max-width:290px;background:var(--elev);border:1px solid var(--line);border-radius:10px 10px 2px 10px;padding:8px 10px;font-size:12px;line-height:18.5px}
+.ume .who{font-size:10.5px;color:var(--tx3);margin-bottom:3px;text-align:right}
+.ai-row{display:flex;gap:8px}
+.av{width:20px;height:20px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none;margin-top:1px}
+.aibody{flex:1;min-width:0}
+.am{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:5px}
+.am .t{color:var(--tx2);font-weight:600;font-size:11px}
+.p{font-size:12px;line-height:19px;color:var(--tx2)}
+.p b{color:var(--tx);font-weight:600}
+.note{margin-top:8px;display:flex;align-items:flex-start;gap:6px;padding:7px 9px;border:1px dashed rgba(167,139,250,.35);border-radius:8px;font-size:10.5px;color:#c9c0ee;line-height:15px}
+.cmp{flex:none;padding:9px 10px 11px;border-top:1px solid var(--line);background:var(--panel2)}
+.inp{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 9px;font-size:12px;color:var(--tx3)}
+.st{height:24px;flex:none;background:#0c1015;border-top:1px solid var(--line);display:flex;align-items:center;gap:13px;padding:0 12px;font-size:10.5px;color:var(--tx3)}
+.st .s{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st .sp{flex:1}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4l1.9 4.9 4.9 1.9-4.9 1.9L11 17.1l-1.9-4.9L4.2 10.2l4.9-1.9z" fill="currentColor"/><path d="M17.8 12.8l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 13h6"/><path d="M9 16h4"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.4"/><circle cx="8" y="18" r="2.4"/><circle cx="16" y="10.5" r="2.4"/><line x1="8" y1="8.4" x2="8" y2="15.6"/><path d="M16 12.9v1.4c0 1.9-1.6 3.3-3.7 3.3H10.4"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.6-3.6"/></g></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></g></symbol>
+<symbol id="i-cdown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></g></symbol>
+<symbol id="i-cright" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-4 5 4 5"/><path d="M15 7l4 5-4 5"/></g></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-panel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="14.8" y1="5" x2="14.8" y2="19"/></g></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7.5 10.4l2.8 2.4-2.8 2.4"/><line x1="13" y1="15" x2="16.8" y2="15"/></g></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h3"/><path d="M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.4 3.9-5 7-5s5.8 1.6 7 5"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6"/><path d="M12 16.4v.9"/></g></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 20.5c-1.2 0-1.6-1-1.2-2 .5-1.2-.4-2.4-1.8-2.4H8a4 4 0 01-4-4"/><circle cx="9" cy="9" r="1.2" fill="currentColor" stroke="none"/><circle cx="13" cy="7" r="1.2" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-key" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="7" cy="12" r="3.5"/><path d="M10.5 12H21"/><path d="M17 12v4"/><path d="M20 12v3"/></g></symbol>
+<symbol id="i-info" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v6"/><path d="M12 7.4v.9"/></g></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></g></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></g></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-l">
+      <div class="mark"><svg class="ic14" viewBox="0 0 24 24" style="color:#0b1424"><use href="#i-sparkles"/></svg></div>
+      <span class="brand">轻码</span>
+      <div class="crumb"><span>ada_case</span><span>/</span><span class="chipb"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-settings"/></svg>设置</span></div>
+    </div>
+    <div class="tb-c">
+      <div class="palette"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索文件、命令与 AI 指令…</span><kbd>Ctrl K</kbd></div>
+    </div>
+    <div class="tb-r">
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-theme"/></svg></div>
+      <div class="tbicon on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+      <div class="ava">AY</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="actv">
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-file"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-search"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-git"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-play"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+      <div class="sp"></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="act on"><span class="ind"></span><svg class="ic20" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+    </div>
+
+    <div class="side">
+      <div class="shead"><span>设置</span></div>
+      <div class="srch"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-search"/></svg>搜索设置</div>
+      <div class="nav">
+        <div class="item"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-panel"/></svg>通用</div>
+        <div class="item on"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>编辑器</div>
+        <div class="item"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-theme"/></svg>主题与外观</div>
+        <div class="item"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>AI 助手</div>
+        <div class="item"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-git"/></svg>Git</div>
+        <div class="item"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-key"/></svg>快捷键</div>
+        <div class="item"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-info"/></svg>关于</div>
+      </div>
+      <div class="ver">轻码 0.4.1 · 设置保存在本机</div>
+    </div>
+
+    <div class="ed">
+      <div class="tabs">
+        <div class="tab on"><svg class="ic14" viewBox="0 0 24 24" style="color:#9dc0e6"><use href="#i-settings"/></svg>设置 · 编辑器</div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#c79cf0"><use href="#i-code"/></svg>App.tsx</div>
+        <div class="sp"></div>
+        <div class="r"><div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div><div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div></div>
+      </div>
+
+      <div class="set">
+        <div class="sthead">
+          <h1>设置</h1>
+          <span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-check"/></svg>已保存 · 08:44</span>
+        </div>
+        <div class="stsearch"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-search"/></svg>搜索设置，例如「字号」「自动保存」<kbd>Ctrl F</kbd></div>
+
+        <div class="sec2">
+          <div class="t">编辑器<span class="cnt">4</span></div>
+          <div class="rows">
+            <div class="row"><div class="l"><b>字号</b><span>代码与终端共用，行高按 1.5 倍自动计算</span></div><div class="ctl"><div class="step"><span>−</span><span class="v">13 px</span><span>+</span></div></div></div>
+            <div class="row"><div class="l"><b>缩进</b><span>保存时按检测到的缩进格式化</span></div><div class="ctl"><div class="seg"><span class="on">2 空格</span><span>4 空格</span><span>Tab</span></div></div></div>
+            <div class="row"><div class="l"><b>自动保存</b><span>停止输入 800 ms 后写入磁盘</span></div><div class="ctl"><div class="tg"><i></i></div></div></div>
+            <div class="row"><div class="l"><b>面包屑</b><span>在编辑器顶部显示文件路径</span></div><div class="ctl"><div class="tg"><i></i></div></div></div>
+          </div>
+        </div>
+
+        <div class="sec2">
+          <div class="t">主题与外观<span class="cnt">2</span></div>
+          <div class="rows">
+            <div class="row"><div class="l"><b>主题</b><span>跟随系统时按系统外观自动切换</span></div><div class="ctl"><div class="seg"><span class="on">深色</span><span>浅色</span><span>跟随系统</span></div></div></div>
+            <div class="row"><div class="l"><b>强调色</b><span>只影响按钮、选中态与焦点环</span></div><div class="ctl"><div class="swatch"><span class="s on" style="background:#5b9cff"></span><span class="s" style="background:#a78bfa"></span><span class="s" style="background:#3fbf9f"></span><span class="s" style="background:#e0b341"></span></div></div></div>
+          </div>
+        </div>
+
+        <div class="sec2">
+          <div class="t">AI 助手<span class="cnt">4</span></div>
+          <div class="rows">
+            <div class="row"><div class="l"><b>模型</b><span>右侧面板与内联能力共用同一个模型</span></div><div class="ctl"><div class="sel"><span>DeepSeek V4 · Flash</span><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></div></div></div>
+            <div class="row"><div class="l"><b>上下文上限</b><span>超过后自动压缩较早的对话</span></div><div class="ctl"><div class="sel"><span>128k tokens</span><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></div></div></div>
+            <div class="row"><div class="l"><b>diff 确认</b><span>AI 写文件前必须由你点确认（不可关闭）</span></div><div class="ctl"><div class="tg lock"><i></i></div></div></div>
+            <div class="row"><div class="l"><b>自动读文件</b><span>提问时自动带上当前文件作为上下文</span></div><div class="ctl"><div class="tg"><i></i></div></div></div>
+          </div>
+        </div>
+
+        <div class="sec2" style="margin-top:12px">
+          <div class="t">Git<span class="cnt">3</span></div>
+          <div class="rows">
+            <div class="row"><div class="l"><b>提交并推送</b><span>提交时默认勾选「提交并推送」</span></div><div class="ctl"><div class="tg"><i></i></div></div></div>
+            <div class="row"><div class="l"><b>危险操作确认</b><span>丢弃、撤销提交、强制推送都要二次确认</span></div><div class="ctl"><div class="tg lock"><i></i></div></div></div>
+            <div class="row"><div class="l"><b>拉取策略</b><span>分叉时优先快进，无法快进再提示合并</span></div><div class="ctl"><div class="sel"><span>快进优先</span><svg class="ic12 ci" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="ai">
+      <div class="aih">
+        <div class="aib"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+        <span class="t">AI 助手</span>
+        <span class="model">DeepSeek V4 · Flash<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sp"></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      </div>
+      <div class="msgs">
+        <div class="ume">
+          <div class="who">你 · 08:52</div>
+          字号改成 14 会不会影响行高和状态栏？
+        </div>
+        <div class="ai-row">
+          <div class="av"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+          <div class="aibody">
+            <div class="am"><span class="t">AI</span><span>08:52</span><span>·</span><span>读取当前设置</span></div>
+            <div class="p">字号从 13 改到 14 时，行高会按 1.5 倍算成 21，编辑区一屏大约少 2 行；状态栏、面包屑等界面字号不受影响。</div>
+            <div class="note"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--ai);flex:none;margin-top:1px"><use href="#i-sparkles"/></svg><span>设置由你自己改：AI 只解释影响，不会替你修改任何开关。</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="cmp">
+        <div class="inp">继续问… 例如：哪些设置会影响性能</div>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="st">
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-settings"/></svg>设置</div>
+    <div class="sp"></div>
+    <div class="s"><span class="livedot"></span>AI 就绪</div>
+    <div class="s">字号 13 · 行高 20</div>
+    <div class="s">UTF-8</div>
+    <div class="s">本机保存</div>
+  </footer>
+</div>
+</body></html>

@@ -1,0 +1,9 @@
+# Build output
+/lightcode
+/lightcode.exe
+*.exe
+*.test
+
+# Local state and captures
+/state.json
+/_shots

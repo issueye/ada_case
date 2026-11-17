@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"><meta charset="utf-8"><title>轻码 IDE · 命令面板</title>
+<style>
+:root{
+  --bg:#0f1216; --panel:#14181e; --panel2:#181d24; --elev:#1d232c; --aibg:#12161c;
+  --line:#252c37; --soft:rgba(255,255,255,.06);
+  --tx:#d9dee7; --tx2:#9aa4b2; --tx3:#68717f;
+  --ac:#5b9cff; --acsoft:rgba(91,156,255,.15);
+  --ai:#a78bfa; --aisoft:rgba(167,139,250,.12);
+  --ok:#3fbf9f; --warn:#e0b341; --err:#ef6b6b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1440px;height:900px;overflow:hidden}
+body{font:13px/1.45 Inter,"Noto Sans SC",system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--tx);background:var(--bg)}
+.app{position:relative;display:flex;flex-direction:column;height:900px}
+.ic{width:16px;height:16px;display:block;flex:none}
+.ic12{width:12px;height:12px;display:block;flex:none}
+.ic14{width:14px;height:14px;display:block;flex:none}
+.ic20{width:20px;height:20px;display:block;flex:none}
+kbd{font:10.5px/1 "JetBrains Mono",Consolas,monospace;border:1px solid var(--line);border-radius:4px;padding:2px 5px;color:var(--tx2);background:var(--panel2)}
+.titlebar{height:40px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.tb-l{width:392px;display:flex;align-items:center;gap:9px}
+.mark{width:22px;height:22px;border-radius:6px;background:linear-gradient(140deg,#6aa8ff,#3d6ed8);display:grid;place-items:center;color:#0b1424;flex:none}
+.brand{font-size:13px;font-weight:600}
+.crumb{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx3)}
+.chipb{display:flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;color:var(--tx2);background:var(--panel2)}
+.tb-c{width:420px;display:flex;justify-content:center;flex:none}
+.palette{width:420px;height:26px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--line);border-radius:6px;background:var(--elev);color:var(--tx3);font-size:11.5px}
+.palette kbd{margin-left:auto;background:transparent}
+.tb-r{flex:1;display:flex;justify-content:flex-end;align-items:center;gap:6px}
+.tbicon{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;color:var(--tx2)}
+.tbicon.on{background:var(--aisoft);color:var(--ai)}
+.ava{width:24px;height:24px;border-radius:50%;background:var(--elev);border:1px solid var(--line);display:grid;place-items:center;color:var(--tx2);font:600 10.5px Inter,sans-serif}
+.body{flex:1;display:flex;min-height:0}
+.actv{width:48px;flex:none;background:#11151a;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:8px 0 10px;gap:2px}
+.act{position:relative;width:34px;height:34px;border-radius:7px;display:grid;place-items:center;color:var(--tx3)}
+.act.on{color:#cfd8e6;background:var(--acsoft)}
+.act.on .ind{position:absolute;left:0;top:7px;bottom:7px;width:2px;border-radius:0 2px 2px 0;background:var(--ac)}
+.actv .sp{flex:1}
+.side{width:240px;flex:none;background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.shead{height:36px;flex:none;display:flex;align-items:center;padding:0 8px 0 14px;border-bottom:1px solid var(--soft)}
+.shead span{font-size:11px;letter-spacing:.06em;color:var(--tx2)}
+.shead .r{margin-left:auto;display:flex;gap:2px}
+.hb{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;color:var(--tx3)}
+.tree{padding:4px 8px;font-size:12.5px;overflow:hidden}
+.n{height:24px;display:flex;align-items:center;gap:6px;padding-right:6px;border-radius:4px;color:var(--tx2);white-space:nowrap}
+.n.on{background:var(--acsoft);color:var(--tx)}
+.n .tw{width:12px;flex:none;color:var(--tx3)}
+.n .ci{color:var(--tx3);flex:none}
+.n.folder{color:var(--tx)}
+.n .g{margin-left:auto;font:600 10.5px "JetBrains Mono",monospace;color:var(--warn)}
+.n .dim{color:var(--tx3);font-size:11px;margin-left:auto}
+.lv1{padding-left:6px}.lv2{padding-left:18px}.lv3{padding-left:30px}
+.ed{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+.tabs{height:36px;flex:none;display:flex;align-items:stretch;background:var(--panel2);border-bottom:1px solid var(--line)}
+.tab{display:flex;align-items:center;gap:7px;padding:0 10px;font-size:12.5px;color:var(--tx2);border-right:1px solid var(--line);white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--tx);box-shadow:inset 0 2px 0 var(--ac)}
+.tabs .sp{flex:1}
+.tabs .r{display:flex;align-items:center;gap:2px;padding:0 8px;border-left:1px solid var(--line)}
+.bc{height:28px;flex:none;display:flex;align-items:center;gap:5px;padding:0 12px;font-size:11.5px;color:var(--tx3);border-bottom:1px solid var(--soft)}
+.cw{flex:1;min-height:0;position:relative;overflow:hidden}
+.code{padding:8px 0 0;font:13px/20px "JetBrains Mono",Consolas,monospace;color:#c7cfdb}
+.cl{height:20px;overflow:hidden;white-space:nowrap;padding-left:52px;padding-right:8px}
+.ln{display:inline-block;width:40px;margin-left:-46px;text-align:right;color:#4d5563;font-size:11px}
+.kw{color:#7aa2ff}.ty{color:#5fc4b8}.fn{color:#e0c07a}.jsx{color:#8fb6ff}.cm{color:#5f6b7a;font-style:italic}
+.ai{width:380px;flex:none;background:var(--aibg);border-left:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.aih{height:44px;flex:none;display:flex;align-items:center;gap:8px;padding:0 10px 0 12px;border-bottom:1px solid var(--line)}
+.aib{width:22px;height:22px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none}
+.aih .t{font-size:13px;font-weight:600}
+.model{display:flex;align-items:center;gap:3px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.aih .sp{flex:1}
+.ctx{height:34px;flex:none;display:flex;align-items:center;gap:5px;padding:0 10px;border-bottom:1px solid var(--soft)}
+.chip{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:2px 6px;font-size:10.5px;color:var(--tx2);background:var(--panel2);white-space:nowrap}
+.msgs{flex:1;min-height:0;padding:12px;display:flex;flex-direction:column;gap:10px;overflow:hidden}
+.ume{align-self:flex-end;max-width:290px;background:var(--elev);border:1px solid var(--line);border-radius:10px 10px 2px 10px;padding:8px 10px;font-size:12px;line-height:18.5px}
+.ume .who{font-size:10.5px;color:var(--tx3);margin-bottom:3px;text-align:right}
+.ai-row{display:flex;gap:8px}
+.av{width:20px;height:20px;border-radius:6px;background:var(--aisoft);color:var(--ai);display:grid;place-items:center;flex:none;margin-top:1px}
+.aibody{flex:1;min-width:0}
+.am{display:flex;align-items:center;gap:6px;font-size:10.5px;color:var(--tx3);margin-bottom:5px}
+.am .t{color:var(--tx2);font-weight:600;font-size:11px}
+.p{font-size:12px;line-height:19px;color:var(--tx2)}
+.cmp{flex:none;padding:9px 10px 11px;border-top:1px solid var(--line);background:var(--panel2)}
+.inp{border:1px solid var(--line);border-radius:8px;background:var(--bg);padding:8px 9px;font-size:12px;color:var(--tx3)}
+.st{height:24px;flex:none;background:#0c1015;border-top:1px solid var(--line);display:flex;align-items:center;gap:13px;padding:0 12px;font-size:10.5px;color:var(--tx3)}
+.st .s{display:flex;align-items:center;gap:4px;white-space:nowrap}
+.st .sp{flex:1}
+.livedot{width:6px;height:6px;border-radius:50%;background:var(--ai)}
+.scrim{position:absolute;inset:0;background:rgba(7,9,12,.55);z-index:40}
+.cmd{position:absolute;left:440px;top:88px;width:560px;background:var(--elev);border:1px solid #2f3745;border-radius:10px;box-shadow:0 30px 80px rgba(0,0,0,.6);z-index:50;overflow:hidden}
+.cmd .in{height:46px;display:flex;align-items:center;gap:9px;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.cmd .in .txt{font-size:13px;color:var(--tx);font-family:"JetBrains Mono",Consolas,monospace}
+.cmd .in .caret{display:inline-block;width:1px;height:14px;background:var(--tx);vertical-align:-2px;margin-left:1px}
+.cmd .in .sp{flex:1}
+.cmd .in .k{font:10px "JetBrains Mono",monospace;border:1px solid var(--line);border-radius:4px;padding:2px 6px;color:var(--tx3)}
+.cmd .list{max-height:540px;overflow:hidden;padding:4px 0}
+.cmd .sec{height:26px;display:flex;align-items:center;gap:6px;padding:0 12px;font-size:10px;letter-spacing:.04em;color:var(--tx3)}
+.cmd .sec .cnt{margin-left:auto;font:600 9.5px "JetBrains Mono",monospace}
+.cmd .row{height:34px;display:flex;align-items:center;gap:9px;padding:0 12px 0 24px;font-size:12px;color:var(--tx2);white-space:nowrap}
+.cmd .row .ci{color:var(--tx3);flex:none}
+.cmd .row .lbl{color:var(--tx)}
+.cmd .row .lbl b{color:var(--tx);font-weight:600}
+.cmd .row .ds{color:var(--tx3);font-size:10.5px}
+.cmd .row .sp{flex:1}
+.cmd .row .k{font:10px "JetBrains Mono",monospace;border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--tx3)}
+.cmd .row.on{background:var(--acsoft);box-shadow:inset 2px 0 0 var(--ac);color:var(--tx)}
+.cmd .row.on .ci{color:var(--ac)}
+.cmd .row.on .k{color:var(--tx2);border-color:rgba(91,156,255,.4)}
+.cmd .foot{height:34px;display:flex;align-items:center;gap:8px;padding:0 12px;border-top:1px solid var(--line);background:var(--panel2);font-size:10.5px;color:var(--tx3)}
+.cmd .foot .k{font:10px "JetBrains Mono",monospace;border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--tx2)}
+.cmd .foot .sp{flex:1}
+.cmd .foot .aihint{display:flex;align-items:center;gap:4px;color:#c9c0ee}
+</style></head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<symbol id="i-sparkles" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.4l1.9 4.9 4.9 1.9-4.9 1.9L11 17.1l-1.9-4.9L4.2 10.2l4.9-1.9z" fill="currentColor"/><path d="M17.8 12.8l.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8z" fill="currentColor"/></g></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h8l4 4v12H6z"/><path d="M14 4v4h4"/><path d="M9 13h6"/><path d="M9 16h4"/></g></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5A1.5 1.5 0 015.5 6h3.2c.4 0 .8.2 1 .5L11 8h7.5A1.5 1.5 0 0120 9.5v8A1.5 1.5 0 0118.5 19h-13A1.5 1.5 0 014 17.5z"/></g></symbol>
+<symbol id="i-folder-open" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8V6.5A1.5 1.5 0 015.5 5h3.2c.4 0 .8.2 1 .5L11 7h6.5A1.5 1.5 0 0119 8.5V10"/><path d="M4 10h15.2a1 1 0 01.96 1.28l-1.6 5.4A1.5 1.5 0 0117.1 18H5.5A1.5 1.5 0 014 16.5z"/></g></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="6"/><path d="M20 20l-3.6-3.6"/></g></symbol>
+<symbol id="i-git" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="6" r="2.4"/><circle cx="8" cy="18" r="2.4"/><circle cx="16" cy="10.5" r="2.4"/><line x1="8" y1="8.4" x2="8" y2="15.6"/><path d="M16 12.9v1.4c0 1.9-1.6 3.3-3.7 3.3H10.4"/></g></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></g></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="18" cy="12" r="1.3"/></g></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></g></symbol>
+<symbol id="i-cdown" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9l7 7 7-7"/></g></symbol>
+<symbol id="i-cright" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></g></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 10-2.6 5.9"/><path d="M20 6.5V12h-5.5"/></g></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></g></symbol>
+<symbol id="i-arrow-up" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></g></symbol>
+<symbol id="i-arrow-down" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M6 13l6 6 6-6"/></g></symbol>
+<symbol id="i-code" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 7l-4 5 4 5"/><path d="M15 7l4 5-4 5"/></g></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l8 4.5-8 4.5-8-4.5z"/><path d="M4 13l8 4.5 8-4.5"/><path d="M4 17.5l8 4.5 8-4.5"/></g></symbol>
+<symbol id="i-grid" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></g></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M10 8.8l5 3.2-5 3.2z"/></g></symbol>
+<symbol id="i-term" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7.5 10.4l2.8 2.4-2.8 2.4"/><line x1="13" y1="15" x2="16.8" y2="15"/></g></symbol>
+<symbol id="i-theme" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 010 16z" fill="currentColor" stroke="none"/></g></symbol>
+<symbol id="i-panel" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="3"/><line x1="14.8" y1="5" x2="14.8" y2="19"/></g></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h9"/><path d="M17 8h3"/><path d="M4 16h3"/><path d="M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="9" r="3.5"/><path d="M5 20c1.2-3.4 3.9-5 7-5s5.8 1.6 7 5"/></g></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></g></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v6"/><path d="M12 16.4v.9"/></g></symbol>
+<symbol id="i-message" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.8c0 3.3-3.6 6-8 6-1 0-1.9-.14-2.8-.4L4 19l1.2-3.3A5.9 5.9 0 014 11.8C4 8.5 7.6 5.8 12 5.8s8 2.7 8 6z"/></g></symbol>
+<symbol id="i-arrow-right" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></g></symbol>
+<symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></g></symbol>
+</svg>
+
+<div class="app">
+  <header class="titlebar">
+    <div class="tb-l">
+      <div class="mark"><svg class="ic14" viewBox="0 0 24 24" style="color:#0b1424"><use href="#i-sparkles"/></svg></div>
+      <span class="brand">轻码</span>
+      <div class="crumb"><span>ada_case</span><span>/</span><span class="chipb"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</span></div>
+    </div>
+    <div class="tb-c">
+      <div class="palette"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-search"/></svg><span>搜索文件、命令与 AI 指令…</span><kbd>Ctrl K</kbd></div>
+    </div>
+    <div class="tb-r">
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-theme"/></svg></div>
+      <div class="tbicon on"><svg class="ic" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div>
+      <div class="tbicon"><svg class="ic" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+      <div class="ava">AY</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <div class="actv">
+      <div class="act on"><span class="ind"></span><svg class="ic20" viewBox="0 0 24 24"><use href="#i-file"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-search"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-git"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-play"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-layers"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-grid"/></svg></div>
+      <div class="sp"></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-user"/></svg></div>
+      <div class="act"><svg class="ic20" viewBox="0 0 24 24"><use href="#i-settings"/></svg></div>
+    </div>
+
+    <div class="side">
+      <div class="shead"><span>资源管理器</span><div class="r"><div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div><div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-more"/></svg></div></div></div>
+      <div class="tree">
+        <div class="n folder lv1"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder-open"/></svg>ada_case<span class="dim">8</span></div>
+        <div class="n folder lv2"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>src</div>
+        <div class="n on lv3"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>App.tsx<span class="g">M</span></div>
+        <div class="n lv3"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg>main.ts</div>
+        <div class="n folder lv2"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>components</div>
+        <div class="n folder lv2"><span class="tw"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg></span><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-folder"/></svg>docs</div>
+        <div class="n lv2"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>package.json</div>
+        <div class="n lv2"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg>README.md</div>
+      </div>
+    </div>
+
+    <div class="ed">
+      <div class="tabs">
+        <div class="tab on"><svg class="ic14" viewBox="0 0 24 24" style="color:#9dc0e6"><use href="#i-code"/></svg>App.tsx</div>
+        <div class="tab"><svg class="ic14" viewBox="0 0 24 24" style="color:#c79cf0"><use href="#i-file"/></svg>theme.css</div>
+        <div class="sp"></div>
+        <div class="r"><div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-panel"/></svg></div></div>
+      </div>
+      <div class="bc"><span>src</span><svg class="ic12" viewBox="0 0 24 24"><use href="#i-cright"/></svg><span style="color:var(--tx2)">App.tsx</span></div>
+      <div class="cw">
+        <div class="code">
+          <div class="cl"><span class="ln">21</span><span class="kw">export</span> <span class="kw">function</span> <span class="fn">App</span>() {</div>
+          <div class="cl"><span class="ln">22</span>&nbsp;&nbsp;<span class="kw">const</span> [tab, setTab] = <span class="fn">useState</span>&lt;<span class="ty">TabKey</span>&gt;('code');</div>
+          <div class="cl"><span class="ln">23</span>&nbsp;&nbsp;<span class="kw">const</span> theme = <span class="fn">useTheme</span>();</div>
+          <div class="cl"><span class="ln">24</span>&nbsp;</div>
+          <div class="cl"><span class="ln">25</span>&nbsp;&nbsp;<span class="kw">return</span> (</div>
+          <div class="cl"><span class="ln">26</span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">Shell</span> theme={theme}&gt;</div>
+          <div class="cl"><span class="ln">27</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">Tabs</span> value={tab} onChange={setTab} /&gt;</div>
+          <div class="cl"><span class="ln">28</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&lt;<span class="jsx">Editor</span> file='src/App.tsx' /&gt;</div>
+          <div class="cl"><span class="ln">29</span>&nbsp;&nbsp;&nbsp;&nbsp;&lt;/<span class="jsx">Shell</span>&gt;</div>
+          <div class="cl"><span class="ln">30</span>&nbsp;&nbsp;);</div>
+          <div class="cl"><span class="ln">31</span>}</div>
+          <div class="cl"><span class="ln">32</span>&nbsp;</div>
+          <div class="cl"><span class="ln">33</span><span class="cm">// 需要提交？用 Ctrl K 调出命令面板</span></div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="ai">
+      <div class="aih">
+        <div class="aib"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+        <span class="t">AI 助手</span>
+        <span class="model">DeepSeek V4 · Flash<svg class="ic12" viewBox="0 0 24 24"><use href="#i-cdown"/></svg></span>
+        <div class="sp"></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-plus"/></svg></div>
+        <div class="hb"><svg class="ic14" viewBox="0 0 24 24"><use href="#i-clock"/></svg></div>
+      </div>
+      <div class="ctx"><span style="font-size:10.5px;color:var(--tx3)">上下文</span><span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-code"/></svg>App.tsx</span><span class="chip"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</span></div>
+      <div class="msgs">
+        <div class="ume"><div class="who">你 · 08:52</div>把这次改动拆成两次提交。</div>
+        <div class="ai-row">
+          <div class="av"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg></div>
+          <div class="aibody"><div class="am"><span class="t">AI</span><span>08:52</span></div><div class="p">可以：先提交 <b>PreviewCard.tsx</b>，再提交 App.tsx 的调用替换。</div></div>
+        </div>
+      </div>
+      <div class="cmp"><div class="inp">继续描述改动…</div></div>
+    </aside>
+  </div>
+
+  <footer class="st">
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>main</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-up"/></svg>1</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg>0</div>
+    <div class="s"><svg class="ic12" viewBox="0 0 24 24" style="color:var(--warn)"><use href="#i-alert"/></svg>2</div>
+    <div class="sp"></div>
+    <div class="s"><span class="livedot"></span>AI 就绪</div>
+    <div class="s">Ln 33, Col 1</div>
+    <div class="s">UTF-8</div>
+    <div class="s">TypeScript React</div>
+  </footer>
+
+  <div class="scrim"></div>
+  <div class="cmd">
+    <div class="in">
+      <svg class="ic14" viewBox="0 0 24 24" style="color:var(--ac)"><use href="#i-search"/></svg>
+      <span class="txt">git<span class="caret"></span></span>
+      <span class="sp"></span>
+      <span class="k">Ctrl K</span>
+    </div>
+    <div class="list">
+      <div class="sec"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-clock"/></svg>最近使用<span class="cnt">2</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-git"/></svg><span class="lbl">提交：提交已暂存的 2 个文件</span><span class="sp"></span><span class="ds">08:12 执行</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-refresh"/></svg><span class="lbl">拉取 origin/main</span><span class="sp"></span><span class="ds">昨天</span></div>
+
+      <div class="sec"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-git"/></svg>Git 命令<span class="cnt">5</span></div>
+      <div class="row on"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-arrow-down"/></svg><span class="lbl"><b>拉取并合并</b></span><span class="ds">先拉取远程，再合并本地提交</span><span class="sp"></span><span class="k">Enter</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-git"/></svg><span class="lbl">切换分支…</span><span class="sp"></span><span class="k">Ctrl G</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-check"/></svg><span class="lbl">暂存全部更改</span><span class="sp"></span><span class="k">Ctrl Shift A</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-undo"/></svg><span class="lbl">撤销上一次提交（保留改动）</span><span class="sp"></span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-alert"/></svg><span class="lbl">强制推送（需输入分支名）</span><span class="sp"></span><span class="k">危险</span></div>
+
+      <div class="sec"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>AI 指令<span class="cnt">3</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg><span class="lbl">解释当前 diff</span><span class="sp"></span><span class="k">Ctrl K I</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg><span class="lbl">写提交消息</span><span class="sp"></span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg><span class="lbl">审查这次提交的风险</span><span class="sp"></span></div>
+
+      <div class="sec"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-file"/></svg>文件<span class="cnt">2</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-code"/></svg><span class="lbl">src/App.tsx</span><span class="sp"></span><span class="ds">修改 · 12 行</span></div>
+      <div class="row"><svg class="ic14 ci" viewBox="0 0 24 24"><use href="#i-file"/></svg><span class="lbl">docs/git-flow.md</span><span class="sp"></span><span class="ds">新增</span></div>
+    </div>
+    <div class="foot">
+      <span class="k">上下键</span><span>选择</span>
+      <span class="k">Enter</span><span>执行</span>
+      <span class="k">Esc</span><span>关闭</span>
+      <span class="sp"></span>
+      <span class="aihint"><svg class="ic12" viewBox="0 0 24 24"><use href="#i-sparkles"/></svg>AI 可解释每条命令</span>
+    </div>
+  </div>
+</div>
+</body></html>
