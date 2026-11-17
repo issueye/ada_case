@@ -306,7 +306,7 @@ func (c *aiDiffCard) diffState() *editor.DiffState {
 	if c.State == nil && c.Old != nil && c.New != nil {
 		c.State = &editor.DiffState{
 			Old: c.Old, New: c.New, Layout: editor.DiffUnified,
-			Font: theme.EditorFont(), Theme: theme.Code(theme.Dark()),
+			Font: theme.EditorFont(), Theme: theme.Code(theme.Window()),
 			ContextLines: 2, Inline: editor.DiffInlineWordAlt,
 		}
 	}

@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+
+	"lightcode/internal/theme"
 )
 
 // TestSettingsPageShowsAndChanges opens the settings page and changes the
@@ -105,5 +107,26 @@ func TestTerminalLinkOpensATLine(t *testing.T) {
 	// A path outside the workspace is refused.
 	if a.openTerminalLink(filepath.ToSlash(filepath.Join(os.TempDir(), "outside.go")), dir) {
 		t.Errorf("a path outside the workspace opened")
+	}
+}
+
+// TestThemeToggle switches to the light board, keeps it in settings.json
+// and restores it.
+func TestThemeToggle(t *testing.T) {
+	a, dir := testWorkspace(t)
+	if theme.IsLight() {
+		t.Fatalf("a new app is not on the dark board")
+	}
+	a.RunCommand("view.toggleTheme")
+	if !theme.IsLight() || a.Prefs.Theme != "light" {
+		t.Fatalf("light = %v, pref = %q", theme.IsLight(), a.Prefs.Theme)
+	}
+	a2 := New(dir, "")
+	if !theme.IsLight() || a2.Prefs.Theme != "light" {
+		t.Errorf("the light board did not survive a restart")
+	}
+	a2.RunCommand("view.toggleTheme")
+	if theme.IsLight() {
+		t.Errorf("the toggle did not go back to dark")
 	}
 }

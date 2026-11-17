@@ -27,7 +27,7 @@ func NewEditor(d *Document) *Editor {
 			Buffer:   d.Buffer,
 			DiffBase: d.Base,
 			Font:     theme.EditorFont(),
-			Theme:    theme.Code(theme.Dark()),
+			Theme:    theme.Code(theme.Window()),
 			Label:    d.Name(),
 		},
 		previewVersion: d.Buffer.Version(),

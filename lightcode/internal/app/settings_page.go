@@ -35,6 +35,24 @@ func (a *App) settingsPage(c *ui.Context) {
 		})
 		ui.Scroll(c).Grow(1).Children(func() {
 			ui.Column(c).Padding(16).Gap(10).Children(func() {
+				a.settingsSection(c, "外观")
+				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+					ui.Text(c, "主题").FontSize(11).TextColor(theme.Muted).Width(120)
+					dark := ui.Button(c, "深色")
+					if !theme.IsLight() {
+						dark.Background(theme.AccentSoft)
+					}
+					if dark.Clicked() {
+						a.UseTheme(false)
+					}
+					light := ui.Button(c, "浅色")
+					if theme.IsLight() {
+						light.Background(theme.AccentSoft)
+					}
+					if light.Clicked() {
+						a.UseTheme(true)
+					}
+				})
 				a.settingsSection(c, "编辑器")
 				a.settingsFontRow(c, "字号", &a.Prefs.EditorFontSize)
 				wrap := a.Prefs.SoftWrap

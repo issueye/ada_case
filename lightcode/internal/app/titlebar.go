@@ -29,6 +29,7 @@ func (a *App) titleBar(c *ui.Context) {
 		ui.Row(c).Grow(1).Justify(ui.Center).Children(func() {
 			a.commandCenter(c)
 		})
+		a.themeToggle(c)
 		a.windowControls(c)
 	})
 }
@@ -60,6 +61,22 @@ func (a *App) commandCenter(c *ui.Context) {
 	})
 	if center.Hovered() {
 		center.Background(theme.Hover).Border(1, theme.Border)
+	}
+}
+
+// themeToggle switches the light and dark boards.
+func (a *App) themeToggle(c *ui.Context) {
+	ic := icons.Moon
+	label := "切换到浅色主题"
+	if theme.IsLight() {
+		ic = icons.Sun
+		label = "切换到深色主题"
+	}
+	b := ui.ButtonBase(c).Label(label).Tooltip(label).Size(28, 24).Radius(4).
+		Children(func() { ui.Icon(c, ic).FontSize(14).TextColor(theme.Muted) })
+	b.OnClick(a.ToggleTheme)
+	if b.Hovered() {
+		b.Background(theme.Active)
 	}
 }
 

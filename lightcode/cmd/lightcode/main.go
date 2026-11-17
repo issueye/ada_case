@@ -42,6 +42,7 @@ func main() {
 		})
 		a.Win.SetTitle(a.WindowTitle())
 		a.Win.OnClosed(a.CloseTerminal)
+		a.SyncNativeTheme()
 		a.Start()
 		if demo := os.Getenv("LIGHTCODE_DEMO"); demo != "" {
 			switch demo {
@@ -49,6 +50,8 @@ func main() {
 				a.RunCommand("terminal.toggle")
 			case "settings":
 				a.RunCommand("view.settings")
+			case "light":
+				a.ToggleTheme()
 			case "capabilities":
 				a.ShowSidebar(4)
 			}

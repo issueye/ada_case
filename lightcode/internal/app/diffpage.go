@@ -59,7 +59,7 @@ func (a *App) openDiff(path string, staged bool) {
 		New:          newBuf,
 		Layout:       editor.DiffSplit,
 		Font:         theme.EditorFont(),
-		Theme:        theme.Code(theme.Dark()),
+		Theme:        theme.Code(theme.Window()),
 		ContextLines: 3,
 		Inline:       editor.DiffInlineWordAlt,
 		SplitPercent: 45,

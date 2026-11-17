@@ -20,6 +20,7 @@ import (
 	"lightcode/internal/git"
 	"lightcode/internal/settings"
 	"lightcode/internal/symbols"
+	"lightcode/internal/theme"
 	"lightcode/internal/workspace"
 
 	"github.com/egoist/mygo/plugins/terminal"
@@ -155,6 +156,7 @@ func New(root, file string) *App {
 	a.registerCommands()
 	a.attachRepo()
 	a.Prefs = loadPrefs()
+	theme.Use(a.Prefs.Theme == "light")
 	a.restoreState()
 	a.applyPrefs()
 	a.openInitial()
@@ -200,6 +202,7 @@ func (a *App) registerCommands() {
 	add("view.split", "拆分 / 关闭编辑器", "视图", "CmdOrCtrl+\\", a.ToggleSplit)
 	add("terminal.toggle", "终端", "视图", "CmdOrCtrl+`", a.toggleTerminal)
 	add("view.settings", "设置", "文件", "", func() { a.SettingsOpen = true })
+	add("view.toggleTheme", "切换明暗主题", "视图", "CmdOrCtrl+Shift+T", a.ToggleTheme)
 	add("palette.files", "快速打开…", "转到", "CmdOrCtrl+P", func() { a.OpenPalette(PaletteFiles) })
 	add("palette.commands", "命令面板…", "视图", "CmdOrCtrl+Shift+P", func() { a.OpenPalette(PaletteCommands) })
 	add("git.refresh", "刷新源代码管理", "Git", "", a.refreshGit)

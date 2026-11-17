@@ -12,13 +12,15 @@ type preferences struct {
 	EditorFontSize   float32 `json:"editorFontSize,omitempty"`
 	TerminalFontSize float32 `json:"terminalFontSize,omitempty"`
 	SoftWrap         bool    `json:"softWrap,omitempty"`
-	AIEnabled        bool    `json:"aiEnabled,omitempty"`
-	TerminalEnabled  bool    `json:"terminalEnabled,omitempty"`
+	// Theme is "dark" or "light"; empty reads as dark.
+	Theme           string `json:"theme,omitempty"`
+	AIEnabled       bool   `json:"aiEnabled,omitempty"`
+	TerminalEnabled bool   `json:"terminalEnabled,omitempty"`
 }
 
 // defaultPreferences is what a first run uses.
 func defaultPreferences() preferences {
-	return preferences{EditorFontSize: 13, TerminalFontSize: 13, AIEnabled: true, TerminalEnabled: true}
+	return preferences{EditorFontSize: 13, TerminalFontSize: 13, AIEnabled: true, TerminalEnabled: true, Theme: "dark"}
 }
 
 // prefsPath is settings.json: LIGHTCODE_SETTINGS when set, else in the
@@ -54,6 +56,9 @@ func loadPrefs() preferences {
 	}
 	if p.TerminalFontSize < 8 || p.TerminalFontSize > 40 {
 		p.TerminalFontSize = 13
+	}
+	if p.Theme != "light" {
+		p.Theme = "dark"
 	}
 	return p
 }

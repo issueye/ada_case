@@ -9,7 +9,7 @@ import (
 
 // View builds the window.
 func (a *App) View(c *ui.Context) {
-	c.SetTheme(theme.Dark())
+	c.SetTheme(theme.Window())
 	if a.Zoom != 0 && a.Zoom != 1 {
 		c.SetZoom(a.Zoom)
 	}

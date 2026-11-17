@@ -194,6 +194,7 @@ type Command struct {
 | M5-2 | 设置：`settings.json`（编辑器/终端字号、软换行、能力开关），设置页即时生效 | 重启保留 | ✅ `prefs.go`、`settings_page.go`、`TestSettingsPageShowsAndChanges` |
 | M5-3 | 扩展（能力面板）：Git / AI / 终端 / 搜索 / 预览的 provider 状态与开关，说明没有可安装扩展 | 与设计稿扩展页一致 | ✅ `capabilitiesPanel`、`TestCapabilitiesPanel` |
 | M5-4 | i18n（界面文案中英切换） | 中英文案齐 | ⬜ 本目标不含 |
+| M5-5 | 明暗主题（追加）：浅色板 + 编辑器浅色 token；标题栏按钮 / 设置页「外观」/ `Ctrl+Shift+T`；`settings.json` 的 `theme`；窗口菜单与对话框经 `Window.Update` 跟随 | 切换后整窗与编辑器一致 | ✅ `theme.Use`、`theme.go`、`TestThemeToggle`、`_shots/lightcode-light.png` |
 
 > 终端在 `go run` 下首次会下载 libghostty-vt 到缓存，打包应用由 `mygo build` 随包分发；终端持有键盘时其键位优先于应用快捷键（VS Code 行为），窗口快捷键在终端外生效。设置是 `settings.json`（偏好），会话仍是 `state.json`。
 
@@ -249,7 +250,7 @@ type Command struct {
 | 状态栏 | 24 | 分支/诊断/位置/编码/行尾/语言 |
 | 终端 | 200（折叠 32） | 底部 |
 
-token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai #a78bfa`、边框 `#242a33`、次要文字 `#8b95a5`；正文 13 px，标题 13 px/600，行高 1.5；编辑器 JetBrains Mono 13，行高 1.5。
+token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai #a78bfa`、边框 `#242a33`、次要文字 `#8b95a5`；正文 13 px，标题 13 px/600，行高 1.5；编辑器 JetBrains Mono 13，行高 1.5。`n浅色：`--bg #ffffff`、`--panel #f6f7f9`、`--ac #3b82f6`、`--ai #7c5cff`、边框 `#d8dee8`、次要文字 `#5b6472`；编辑器用 GitHub Light token。两者由 `theme.Use(light)` 切换，视图只读 token。
 
 ## 6. 测试与验收
 
@@ -289,6 +290,8 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | M3（核心完成） | status/SCM 面板、diff 页、逐 hunk 暂存、提交、历史 | 测试 64 个全绿；hunk 暂存用 `hash-object` + `update-index`（用例验证只动选中的块）；冲突/三方与 remote 操作待做 |
 | 2026-11-17 | M4（完成） | OpenAI 流式客户端、三态 AI 面板、流式 markdown、diff 卡片与确认应用、取消/重试、Key 入 Secrets | 测试 81 个全绿；AI 客户端的 SSE/取消用 httptest 验证；应用 diff 有测试；真机调用真实模型未验证（无 Key） |
 | 2026-11-17 | M5（完成） | 终端分栏、设置页与 settings.json、能力面板 | 终端在真机跑起 PowerShell；测试 86 个全绿；libghostty-vt 首次由缓存下载；i18n 未做 |
+| 2026-11-17 | 明暗主题（追加） | 浅色板与浅色编辑器、标题栏/设置/快捷键切换、`theme` 入 settings.json | 测试 87 个全绿；真机浅色截图 `_shots/lightcode-light.png` |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
+
 
 
