@@ -34,7 +34,7 @@ func (a *App) aiFloat(c *ui.Context) {
 			Radius(10).Background(theme.Panel).Border(1, theme.Border).
 			Shadow(0, 16, 40, 0, ui.RGBA(0, 0, 0, 0.55)).
 			Cursor(ui.CursorGrab)
-		card.HandleInput(a.dragAI(0))
+		card.HandleInput(a.dragAIHeader(0))
 		card.Children(func() {
 			a.aiHeader(c)
 			a.aiBody(c)
@@ -43,29 +43,48 @@ func (a *App) aiFloat(c *ui.Context) {
 	})
 }
 
-// aiHeader is the title row: the drag grip, the modes, the settings and
-// the collapse.
+// aiHeader is the floating panel's window-like header: a fixed drag area
+// at the left (it moves the panel), and the controls at the right, which
+// the drag area does not cover.
 func (a *App) aiHeader(c *ui.Context) {
-	ui.Row(c).Height(theme.PanelHeadH).PaddingX(10).Gap(6).AlignItems(ui.Center).Children(func() {
-		grip := ui.Row(c).Gap(6).AlignItems(ui.Center).Cursor(ui.CursorGrab).
-			Tooltip("拖动可移动 AI 面板")
-		// Only the title drags: the buttons to its right take their own
-		// presses, which a root handler would swallow.
-		grip.HandleInput(a.dragAI(0))
-		grip.Children(func() {
-			ui.Icon(c, icons.Sparkles).FontSize(15).TextColor(theme.AI)
-			ui.Text(c, "AI 助手").FontSize(11).Bold().TextColor(theme.Text)
-			if a.AI.Streaming {
-				ui.Text(c, "生成中").FontSize(9).TextColor(theme.AI).Padding(1, 5).
-					Radius(3).Background(theme.AISoft)
+	ui.Row(c).Height(36).Background(theme.PanelDeep).PaddingX(8).Gap(6).
+		AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(theme.BorderSoft).
+		Children(func() {
+			grip := ui.Row(c).Width(110).Shrink(0).Gap(6).AlignItems(ui.Center).
+				Cursor(ui.CursorGrab).Tooltip("拖动标题移动 AI 面板")
+
+			grip.Children(func() {
+				ui.Icon(c, icons.Sparkles).FontSize(15).TextColor(theme.AI)
+				ui.Text(c, "AI 助手").FontSize(11).Bold().TextColor(theme.Text)
+				if a.AI.Streaming {
+					ui.Text(c, "生成中").FontSize(9).TextColor(theme.AI).Padding(1, 5).
+						Radius(3).Background(theme.AISoft)
+				}
+			})
+			ui.Box(c).Grow(1)
+			modes := []struct {
+				icon  *ui.SVG
+				label string
+			}{
+				{icons.PanelLeft, "停靠"},
+				{icons.Split, "悬浮"},
+				{icons.PanelRight, "收起"},
 			}
+			for i, m := range modes {
+				color := theme.Muted
+				if a.AI.Mode == i {
+					color = theme.Accent
+				}
+				btn := ui.ButtonBase(c).Size(24, 22).Radius(4).Label(m.label).Tooltip(m.label)
+				btn.Children(func() { ui.Icon(c, m.icon).FontSize(13).TextColor(color) })
+				if a.AI.Mode == i {
+					btn.Background(theme.AccentSoft)
+				}
+				btn.OnClick(func() { a.SetAIMode(i) })
+			}
+			iconButton(c, icons.Settings, "AI 设置", 20, a.OpenAISettings)
+			iconButton(c, icons.Close, "关闭 AI 面板", 20, func() { a.SetAIMode(AIRail) })
 		})
-		ui.Box(c).Grow(1)
-		ui.Segmented(c, &a.AI.Mode, "停靠", "悬浮", "收起").FontSize(9).
-			OnChange(func() { a.SaveState() })
-		iconButton(c, icons.Settings, "AI 设置", 20, a.OpenAISettings)
-		iconButton(c, icons.History, "新对话", 20, a.NewAIChat)
-	})
 }
 
 // aiBody is the conversation: the intro with suggestions, or the turns
@@ -488,4 +507,16 @@ func (a *App) moveAI(target int, dx, dy float32) (float32, float32) {
 	nx, ny := a.clampAI(ox+dx, oy+dy, w, h)
 	*x, *y = nx, ny
 	return nx - ox, ny - oy
+}
+
+// dragAIHeader starts a drag only from the header's grip, leaving the
+// controls to the right to their own clicks.
+func (a *App) dragAIHeader(target int) func(ui.InputEvent) bool {
+	inner := a.dragAI(target)
+	return func(ev ui.InputEvent) bool {
+		if ev.Kind == ui.InputPointerDown && (ev.X > 170 || ev.Y > 36) {
+			return false
+		}
+		return inner(ev)
+	}
 }

@@ -225,3 +225,50 @@ func TestAIDragFloatingAndRail(t *testing.T) {
 		t.Errorf("restored rail = %.0f, %.0f", a2.Prefs.AIRailX, a2.Prefs.AIRailY)
 	}
 }
+
+// TestAIFloatHeaderButtons clicks the floating panel's header controls,
+// which the drag area must leave alone.
+func TestAIFloatHeaderButtons(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.AI.Mode = AIFloat
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.Frame()
+	// Collapse first: a settings dialog would eat the next click while
+	// it closes.
+	if err := tt.Click("收起"); err != nil {
+		t.Fatal(err)
+	}
+	if a.AI.Mode != AIRail {
+		t.Errorf("the 收起 control did not collapse; mode %d", a.AI.Mode)
+	}
+	a.SetAIMode(AIDock)
+	tt.Frame()
+	if err := tt.Click("AI 设置"); err != nil {
+		t.Fatal(err)
+	}
+	if !a.AI.SettingsOpen {
+		t.Errorf("the settings button did not open the dialog")
+	}
+}
+
+// TestAIFloatHeaderFloat closes and opens from the floating header too.
+func TestAIFloatHeaderFloat(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.AI.Mode = AIFloat
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.Frame()
+	if err := tt.Click("关闭 AI 面板"); err != nil {
+		t.Fatal(err)
+	}
+	if a.AI.Mode != AIRail {
+		t.Errorf("close did not collapse; mode %d", a.AI.Mode)
+	}
+	a.SetAIMode(AIFloat)
+	tt.Frame()
+	if err := tt.Click("AI 设置"); err != nil {
+		t.Fatal(err)
+	}
+	if !a.AI.SettingsOpen {
+		t.Errorf("settings did not open from the floating header")
+	}
+}
