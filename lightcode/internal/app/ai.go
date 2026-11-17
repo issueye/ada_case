@@ -87,6 +87,55 @@ func (a *App) aiBody(c *ui.Context) {
 	})
 }
 
+// aiRailPeek previews the last answer while the rail card is hovered.
+func (a *App) aiRailPeek(c *ui.Context) {
+	_, height := c.Size()
+	top := float32(theme.TitleBarH) + (height-float32(theme.TitleBarH)-float32(theme.StatusBarH))/2 - 100
+	if top < float32(theme.TitleBarH)+8 {
+		top = float32(theme.TitleBarH) + 8
+	}
+	ui.Overlay(c, func() {
+		card := ui.Column(c).Absolute().Right(float32(theme.AIRailW)+10).Top(top).Width(330).
+			Padding(12).Gap(6).Radius(8).Background(theme.Panel).Border(1, theme.AI).
+			Shadow(0, 12, 30, 0, ui.RGBA(0, 0, 0, 0.5))
+		card.Children(func() {
+			ui.Row(c).Gap(6).AlignItems(ui.Center).Children(func() {
+				ui.Icon(c, icons.Sparkles).FontSize(13).TextColor(theme.AI)
+				ui.Text(c, "AI 助手").FontSize(11).Bold().TextColor(theme.Text)
+			})
+			excerpt := a.lastAnswerExcerpt()
+			if excerpt == "" {
+				excerpt = "展开对话，让 AI 改代码；回答只产出 diff，由你确认后应用。"
+			}
+			ui.Text(c, excerpt).FontSize(11).TextColor(theme.Muted).LineHeight(1.5)
+			ui.Text(c, "点击卡片展开").FontSize(9).TextColor(theme.Faint)
+		})
+	})
+}
+
+// lastAnswerExcerpt is the tail of the last answer for the rail's preview.
+func (a *App) lastAnswerExcerpt() string {
+	for i := len(a.AI.Messages) - 1; i >= 0; i-- {
+		m := &a.AI.Messages[i]
+		if m.Role != "assistant" {
+			continue
+		}
+		text := m.Full
+		if text == "" {
+			text = m.Content
+		}
+		if text == "" {
+			continue
+		}
+		r := []rune(text)
+		if len(r) > 320 {
+			r = r[len(r)-320:]
+		}
+		return string(r)
+	}
+	return ""
+}
+
 // revealAI shows a few more runes of the answer, as a typewriter: the
 // network may deliver a whole reply at once, the view still types it.
 // It reports whether more is left to show.
@@ -297,6 +346,7 @@ func (a *App) aiRail(c *ui.Context) {
 			ui.Box(c).Grow(1)
 			ui.Text(c, "AI").FontSize(9).Bold().TextColor(theme.AI)
 		})
+		a.AI.RailHover = card.Hovered()
 		if card.Hovered() {
 			card.Border(1, theme.AI)
 		}

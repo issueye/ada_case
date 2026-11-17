@@ -178,3 +178,22 @@ func TestAITypewriterReveal(t *testing.T) {
 		t.Errorf("the view keeps asking for frames after the reveal")
 	}
 }
+
+// TestAIRailHoverPeek previews the last answer when the rail is hovered,
+// and hides it when the pointer leaves.
+func TestAIRailHoverPeek(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.AI.Mode = AIRail
+	a.AI.Messages = []aiMessage{{Role: "assistant", Content: "上一轮的回答摘要", Full: "上一轮的回答摘要"}}
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.Move(1242, 418)
+	tt.Frame()
+	if !tt.HasText("点击卡片展开") {
+		t.Fatalf("no peek; texts %q", tt.Texts())
+	}
+	tt.Move(600, 400)
+	tt.Frame()
+	if tt.HasText("点击卡片展开") {
+		t.Errorf("the peek stayed after the pointer left")
+	}
+}

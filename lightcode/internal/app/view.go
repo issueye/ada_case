@@ -37,6 +37,9 @@ func (a *App) View(c *ui.Context) {
 	a.fileOpOverlay(c)
 	a.discardOverlay(c)
 	a.aiFloat(c)
+	if a.AI.Mode == AIRail && a.AI.RailHover {
+		a.aiRailPeek(c)
+	}
 	a.aiSettingsOverlay(c)
 }
 

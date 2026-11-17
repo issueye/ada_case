@@ -32,4 +32,10 @@ func TestM4Screenshots(t *testing.T) {
 	a.SetAIMode(AIFloat)
 	tt.Frame()
 	saveShot(t, tt, "lightcode-ui-ai-float.png")
+
+	a.SetAIMode(AIRail)
+	tt.Frame()
+	tt.Move(1242, 418)
+	tt.Frame()
+	saveShot(t, tt, "lightcode-ui-ai-peek.png")
 }

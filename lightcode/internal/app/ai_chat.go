@@ -64,6 +64,9 @@ type aiState struct {
 	SetBase      string
 	SetModel     string
 	SetKey       string
+	// RailHover is whether the collapsed rail card is hovered, for its
+	// preview.
+	RailHover bool
 
 	cancel context.CancelFunc
 	seq    uint64
