@@ -22,12 +22,26 @@ func (a *App) View(c *ui.Context) {
 			if a.SidebarOpen {
 				a.sidebar(c)
 			}
-			a.editorArea(c)
+			ui.Column(c).Grow(1).Children(func() {
+				if a.TermOpen {
+					ui.SplitVerticalPercent(c, &a.TermPercent, func() {
+						a.editorArea(c)
+					}, func() {
+						a.terminalPane(c)
+					}).Grow(1)
+				} else {
+					a.editorArea(c)
+				}
+			})
 			switch a.AI.Mode {
 			case AIDock:
-				a.aiPanel(c)
+				if a.Prefs.AIEnabled {
+					a.aiPanel(c)
+				}
 			case AIRail:
-				a.aiRail(c)
+				if a.Prefs.AIEnabled {
+					a.aiRail(c)
+				}
 			}
 		})
 		a.statusBar(c)
@@ -37,7 +51,7 @@ func (a *App) View(c *ui.Context) {
 	a.fileOpOverlay(c)
 	a.discardOverlay(c)
 	a.aiFloat(c)
-	if a.AI.Mode == AIRail && a.AI.RailHover {
+	if a.Prefs.AIEnabled && a.AI.Mode == AIRail && a.AI.RailHover {
 		a.aiRailPeek(c)
 	}
 	a.aiSettingsOverlay(c)
@@ -63,6 +77,10 @@ func (a *App) bindWindowKeys(c *ui.Context) {
 // editorArea is the middle column: one editor column, or two split by a
 // divider the user drags.
 func (a *App) editorArea(c *ui.Context) {
+	if a.SettingsOpen {
+		a.settingsPage(c)
+		return
+	}
 	if len(a.Cols) > 1 {
 		ui.SplitPercent(c, &a.SplitPercent, func() {
 			a.columnView(c, 0)

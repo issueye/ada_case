@@ -29,6 +29,7 @@ func testWorkspace(t *testing.T) (*App, string) {
 	}
 	// The session file is the test's: New reads and writes it.
 	t.Setenv("LIGHTCODE_STATE", filepath.Join(dir, "state.json"))
+	t.Setenv("LIGHTCODE_SETTINGS", filepath.Join(dir, "settings.json"))
 	a := New(dir, "")
 	return a, dir
 }

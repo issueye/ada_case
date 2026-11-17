@@ -23,7 +23,7 @@ func (a *App) sidebar(c *ui.Context) {
 		case 3:
 			a.placeholder(c, icons.Run, "运行与调试", "运行配置与调试会话，计划在 M5 之后评估。")
 		case 4:
-			a.placeholder(c, icons.Extensions, "扩展", "能力面板：Git / AI / 终端 / 预览器的开关与 provider 列表，计划在 M5 提供。")
+			a.capabilitiesPanel(c)
 		}
 	})
 }

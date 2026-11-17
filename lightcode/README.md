@@ -41,6 +41,9 @@ go run ./cmd/lightcode <folder> [file]
 - 视图：`Ctrl+B` 侧栏；`Ctrl+Shift+E/F/G/X` 切换侧栏视图；`Ctrl+=` / `Ctrl+-` / `Ctrl+0` 缩放；`Ctrl+\` 拆分/关闭分屏（`ui.SplitPercent`，拖动分隔条；两列共享同一 Document 的 undo）；AI 停靠 380 宽，收起后缩为右侧 62 px 独立栏位中的 48×172 卡片（不压住编辑器与滚动条），点卡片展开。
 - 命令面板可滚动（`ui.Scroll`，↑↓ 选择会自动滚到可见处），`打开文件夹…` 等靠后的命令都能找到。
 - 状态栏：分支（读 `.git/HEAD`）、消息、行列、缩进、编码、行尾、语言、AI。
+- 终端：底部分栏（可拖高度的 `SplitVerticalPercent`），`Ctrl+`` 开关，`plugins/terminal`（Ghostty libghostty-vt）跑用户 shell，`path:line:col` 链接可用 Ctrl+点击回到编辑器；库缺失时显示原因与「重试」。`go run` 下首次会下载库到缓存，打包应用随包分发。
+- 设置：`settings.json` 里的编辑器/终端字号、软换行、能力开关即时生效；设置页显示两个配置文件路径。设置（偏好）与会话（`state.json`）分开。
+- 扩展（能力面板）：Git / AI / 终端 / 搜索 / 预览器的 provider 状态与开关；说明这个版本没有可安装扩展，只有构建期内置能力。
 
 分屏会随会话恢复（左/右列的文件、哪列活动、分隔比例都记在 `state.json`）；IME 的中文输入有无头测试，候选窗与真机文件监视仍需人工确认。
 
@@ -76,7 +79,7 @@ go build ./... && go vet ./... && go test ./...
 ```
 
 - 单元：`document`（保存/CRLF/二进制/GBK/BOM/外部改动）、`settings`（默认值/损坏文件/钳制）、`workspace`（排序/懒加载/ignore/模糊/索引）、`command`（键位/注册表）、`search`（大小写/正则/上限/取消/二进制/忽略/rg 解析）、`symbols`（Go/Markdown/回退）、`git`（status 解析/暂存/提交/log）、`ai`（SSE 流式/请求体/HTTP 错误/取消）。
-- 交互（`ui.NewTester`）：快速打开、保存脏文件、脏关闭确认、侧栏与 AI 切换、会话恢复、缩放、预览标签、外部改动横条、分屏共享 undo/键位/会话、搜索与跳转、大纲渲染/跳转、文件新建/改名/删除、watcher 刷新树、中文输入、SCM 面板、diff 页与逐块暂存、提交与历史、AI 流式回答/diff 应用/重试/三态与设置。
+- 交互（`ui.NewTester`）：快速打开、保存脏文件、脏关闭确认、侧栏与 AI 切换、会话恢复、缩放、预览标签、外部改动横条、分屏共享 undo/键位/会话、搜索与跳转、大纲渲染/跳转、文件新建/改名/删除、watcher 刷新树、中文输入、SCM 面板、diff 页与逐块暂存、提交与历史、AI 流式回答/diff 应用/重试/三态与设置、终端错误页与 `path:line:col` 链接、设置页与 settings.json、能力面板开关。
 - 预算：`internal/app/budget_test.go`（2,000 行文件 20 帧，断言 < 8 ms，实测 0.29 ms）；30k 基准见 `workspace/index_bench_test.go` 与 `search/bench_test.go`（`LIGHTCODE_BENCH=1`）。
 - 截图：`internal/app/screenshot_test.go` 输出 `_shots/lightcode-ui-*.png`；`baseline_test.go` 与 `testdata/shots/editor.png` 比像素（1%），`LIGHTCODE_UPDATE_BASELINE=1` 可重生成基线。
 
@@ -84,6 +87,6 @@ go build ./... && go vet ./... && go test ./...
 
 ## 里程碑
 
-M0 空壳（已完成）→ M1 会话恢复/外部改动/预览标签/分屏/缩放/编码/IME（已完成）→ M2 工作区（索引、搜索、大纲、文件操作、watcher，已完成）→ M3 Git（status/SCM/diff/逐 hunk 暂存/提交/历史，核心完成；冲突与 remote 待做）→ M4 AI 面板（流式客户端、三态、diff 卡片、确认应用，已完成）→ M5 终端/设置/能力面板 → M6 打磨发布。
+M0 空壳（已完成）→ M1 会话恢复/外部改动/预览标签/分屏/缩放/编码/IME（已完成）→ M2 工作区（索引、搜索、大纲、文件操作、watcher，已完成）→ M3 Git（status/SCM/diff/逐 hunk 暂存/提交/历史，核心完成；冲突与 remote 待做）→ M4 AI 面板（流式客户端、三态、diff 卡片、确认应用，已完成）→ M5 终端/设置/能力面板（已完成；i18n 未做）→ M6 打磨发布。
 
 

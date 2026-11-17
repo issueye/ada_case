@@ -21,6 +21,8 @@ import (
 	"lightcode/internal/settings"
 	"lightcode/internal/symbols"
 	"lightcode/internal/workspace"
+
+	"github.com/egoist/mygo/plugins/terminal"
 )
 
 // PaletteMode is what the palette lists.
@@ -77,12 +79,26 @@ type App struct {
 	// Repo is the workspace's Git repository, nil outside one; Git is its
 	// last status, GitMsg the commit message, GitErr git's last error, and
 	// GitLog its recent commits. Diff is the open diff page.
-	Repo        *git.Repo
-	Git         *git.Status
-	GitMsg      string
-	GitErr      string
-	GitLog      []git.LogEntry
-	Diff        *diffTab
+	Repo   *git.Repo
+	Git    *git.Status
+	GitMsg string
+	GitErr string
+	GitLog []git.LogEntry
+	Diff   *diffTab
+	// Term is the bottom terminal, its error, whether the pane shows,
+	// and the share of the height it takes.
+	Term        *terminal.Terminal
+	TermErr     string
+	TermOpen    bool
+	TermPercent float32
+	// SettingsOpen shows the settings page in the active column.
+	SettingsOpen bool
+	// Prefs are the app's preferences, from settings.json.
+	Prefs preferences
+	// Capability toggles in the extensions view.
+	Capabilities capabilityState
+	// Preferences are loaded once, before the window.
+	PrefsLoaded bool
 	gitTick     int
 	DiscardPath string
 	DiscardOpen bool
@@ -118,6 +134,7 @@ func New(root, file string) *App {
 		SplitPercent:   50,
 		OutlineOpen:    true,
 		OutlinePercent: 58,
+		TermPercent:    28,
 	}
 	a.resetColumns()
 	a.initialFile = file
@@ -137,7 +154,9 @@ func New(root, file string) *App {
 	}
 	a.registerCommands()
 	a.attachRepo()
+	a.Prefs = loadPrefs()
 	a.restoreState()
+	a.applyPrefs()
 	a.openInitial()
 	return a
 }
@@ -179,6 +198,8 @@ func (a *App) registerCommands() {
 	add("view.zoomOut", "缩小", "视图", "CmdOrCtrl+-", func() { a.SetZoom(a.Zoom - 0.1) })
 	add("view.zoomReset", "重置缩放", "视图", "CmdOrCtrl+0", func() { a.SetZoom(1) })
 	add("view.split", "拆分 / 关闭编辑器", "视图", "CmdOrCtrl+\\", a.ToggleSplit)
+	add("terminal.toggle", "终端", "视图", "CmdOrCtrl+`", a.toggleTerminal)
+	add("view.settings", "设置", "文件", "", func() { a.SettingsOpen = true })
 	add("palette.files", "快速打开…", "转到", "CmdOrCtrl+P", func() { a.OpenPalette(PaletteFiles) })
 	add("palette.commands", "命令面板…", "视图", "CmdOrCtrl+Shift+P", func() { a.OpenPalette(PaletteCommands) })
 	add("git.refresh", "刷新源代码管理", "Git", "", a.refreshGit)

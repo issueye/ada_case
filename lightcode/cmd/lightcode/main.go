@@ -41,7 +41,18 @@ func main() {
 			Content:           ui.View(a.View),
 		})
 		a.Win.SetTitle(a.WindowTitle())
+		a.Win.OnClosed(a.CloseTerminal)
 		a.Start()
+		if demo := os.Getenv("LIGHTCODE_DEMO"); demo != "" {
+			switch demo {
+			case "terminal":
+				a.RunCommand("terminal.toggle")
+			case "settings":
+				a.RunCommand("view.settings")
+			case "capabilities":
+				a.ShowSidebar(4)
+			}
+		}
 		// LIGHTCODE_CAPTURE makes the app save a PNG of the window and
 		// quit, as the screenshot regression of docs/dev-plan.md §6 does.
 		if path := os.Getenv("LIGHTCODE_CAPTURE"); path != "" {
@@ -94,6 +105,8 @@ func newMenu(a *app.App) *mygo.Menu {
 		mygo.Separator(),
 		{Label: "切换侧栏", Accelerator: "CmdOrCtrl+B", Click: run("view.toggleSidebar")},
 		{Label: "拆分 / 关闭编辑器", Accelerator: "CmdOrCtrl+\\", Click: run("view.split")},
+		{Label: "终端", Accelerator: "CmdOrCtrl+`", Click: run("terminal.toggle")},
+		{Label: "设置", Click: run("view.settings")},
 		{Label: "切换 AI 面板", Click: run("view.toggleAI")},
 		mygo.Separator(),
 		{Label: "放大", Accelerator: "CmdOrCtrl+=", Click: run("view.zoomIn")},

@@ -186,6 +186,17 @@ type Command struct {
 
 > 未做：浮标拖拽与悬停展开、对话历史持久化、应用后的一键撤销（当前写入缓冲区、保持 dirty，可再用 Git 丢弃）、精确 token 预算。
 
+### 2.6 M5 开工清单（进度）
+
+| # | 任务 | 验收 | 状态 |
+|---|---|---|---|
+| M5-1 | 终端：`plugins/terminal`（Ghostty libghostty-vt）嵌底部分栏（`SplitVerticalPercent` 可拖），`Ctrl+`` 切换，头部关闭；`OpenLink` 把 `path:line:col` 打开到编辑器；库缺失时显示原因与重试 | 全屏程序正确、`Ctrl+C` 归属终端 | ✅ 真机跑起 PowerShell；`TestTerminalPaneFailure`、`TestTerminalLinkOpensATLine` |
+| M5-2 | 设置：`settings.json`（编辑器/终端字号、软换行、能力开关），设置页即时生效 | 重启保留 | ✅ `prefs.go`、`settings_page.go`、`TestSettingsPageShowsAndChanges` |
+| M5-3 | 扩展（能力面板）：Git / AI / 终端 / 搜索 / 预览的 provider 状态与开关，说明没有可安装扩展 | 与设计稿扩展页一致 | ✅ `capabilitiesPanel`、`TestCapabilitiesPanel` |
+| M5-4 | i18n（界面文案中英切换） | 中英文案齐 | ⬜ 本目标不含 |
+
+> 终端在 `go run` 下首次会下载 libghostty-vt 到缓存，打包应用由 `mygo build` 随包分发；终端持有键盘时其键位优先于应用快捷键（VS Code 行为），窗口快捷键在终端外生效。设置是 `settings.json`（偏好），会话仍是 `state.json`。
+
 ## 3. WBS（按模块，含依赖）
 
 | ID | 模块 | 任务 | 人日 | 依赖 |
@@ -277,6 +288,7 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | M2（完成） | 索引、搜索面板（rg + Go 回退）、大纲、文件操作、watcher | 30k 实测：索引 37–213 ms、搜索首条 7.5 ms/全量 924 ms；测试 54 个全绿；真机 watcher 已验证（运行中新建文件可见） |
 | 2026-11-17 | M3（核心完成） | status/SCM 面板、diff 页、逐 hunk 暂存、提交、历史 | 测试 64 个全绿；hunk 暂存用 `hash-object` + `update-index`（用例验证只动选中的块）；冲突/三方与 remote 操作待做 |
 | 2026-11-17 | M4（完成） | OpenAI 流式客户端、三态 AI 面板、流式 markdown、diff 卡片与确认应用、取消/重试、Key 入 Secrets | 测试 81 个全绿；AI 客户端的 SSE/取消用 httptest 验证；应用 diff 有测试；真机调用真实模型未验证（无 Key） |
+| 2026-11-17 | M5（完成） | 终端分栏、设置页与 settings.json、能力面板 | 终端在真机跑起 PowerShell；测试 86 个全绿；libghostty-vt 首次由缓存下载；i18n 未做 |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
 
 
