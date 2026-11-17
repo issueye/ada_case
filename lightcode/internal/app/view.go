@@ -38,10 +38,6 @@ func (a *App) View(c *ui.Context) {
 				if a.Prefs.AIEnabled {
 					a.aiPanel(c)
 				}
-			case AIRail:
-				if a.Prefs.AIEnabled {
-					a.aiRail(c)
-				}
 			}
 		})
 		a.statusBar(c)
@@ -93,25 +89,32 @@ func (a *App) editorArea(c *ui.Context) {
 }
 
 // columnView shows one column: its tabs, breadcrumbs, editor or empty
-// page.
+// page, and the assistant's rail when it is collapsed.
 func (a *App) columnView(c *ui.Context, idx int) {
 	col := a.Cols[idx]
 	ui.Column(c).Grow(1).Background(theme.Background).Children(func() {
 		a.columnTabs(c, idx)
 		a.breadcrumbs(c, col)
 		ui.Box(c).Height(1).Background(theme.BorderSoft)
-		if a.Diff != nil && idx == a.ActiveCol {
-			a.diffView(c)
-			return
-		}
-		if e := col.Current(); e != nil {
-			if e.Doc.ExternalChanged() {
-				a.externalBanner(c, e.Doc)
+		ui.Row(c).Grow(1).AlignItems(ui.Stretch).Children(func() {
+			ui.Column(c).Grow(1).Background(theme.Background).Children(func() {
+				if a.Diff != nil && idx == a.ActiveCol {
+					a.diffView(c)
+					return
+				}
+				if e := col.Current(); e != nil {
+					if e.Doc.ExternalChanged() {
+						a.externalBanner(c, e.Doc)
+					}
+					e.State.OnInput = a.RunKey
+					editorView(c, e)
+				} else {
+					a.emptyColumn(c, col)
+				}
+			})
+			if idx == a.ActiveCol && a.AI.Mode == AIRail && a.Prefs.AIEnabled {
+				a.aiRail(c)
 			}
-			e.State.OnInput = a.RunKey
-			editorView(c, e)
-		} else {
-			a.emptyColumn(c, col)
-		}
+		})
 	})
 }

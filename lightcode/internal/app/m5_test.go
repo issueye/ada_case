@@ -130,3 +130,46 @@ func TestThemeToggle(t *testing.T) {
 		t.Errorf("the toggle did not go back to dark")
 	}
 }
+
+// TestCloseOthersAndSaved covers the tab menu's bulk closes.
+func TestCloseOthersAndSaved(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.resetColumns()
+	a.OpenFile(filepath.Join(dir, "main.go"))
+	a.OpenFile(filepath.Join(dir, "pkg", "util.go"))
+	a.OpenFile(filepath.Join(dir, "README.md"))
+	util := a.Cols[0].Current().Doc
+	util.Buffer.Set("dirty\n")
+	mainDoc := a.Cols[0].Editors[0].Doc
+	a.closeOthersIn(0, mainDoc)
+	if len(a.Cols[0].Editors) != 2 {
+		t.Fatalf("tabs = %d, want main and the dirty util", len(a.Cols[0].Editors))
+	}
+	a.closeSavedIn(0)
+	if len(a.Cols[0].Editors) != 1 || a.Cols[0].Editors[0].Doc != util {
+		t.Errorf("closeSaved left %d tabs", len(a.Cols[0].Editors))
+	}
+}
+
+// TestTabContextMenu right-clicks a tab and finds its actions.
+func TestTabContextMenu(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.resetColumns()
+	a.OpenFile(filepath.Join(dir, "main.go"))
+	a.OpenFile(filepath.Join(dir, "pkg", "util.go"))
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.RightClickAt(340, 64)
+	items := tt.Menu()
+	want := map[string]bool{"关闭": false, "关闭其他": false, "关闭已保存": false, "复制路径": false, "在文件管理器中显示": false}
+	for _, it := range items {
+		if _, ok := want[it]; ok {
+			want[it] = true
+		}
+	}
+	for name, seen := range want {
+		if !seen {
+			t.Errorf("tab menu misses %q; menu %q", name, items)
+		}
+	}
+	tt.CloseMenu()
+}

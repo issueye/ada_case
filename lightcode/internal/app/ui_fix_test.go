@@ -37,8 +37,12 @@ func TestAIRailKeepsItsOwnStrip(t *testing.T) {
 	if !ok {
 		t.Fatalf("no rail label")
 	}
-	// The editor ends where the rail's 62 DIP strip starts, at 1280-62.
+	// The editor ends where the rail's 62 DIP strip starts, at 1280-62,
+	// and the rail starts under the tab strip and breadcrumbs.
 	if box.X < 1280-62 {
 		t.Errorf("the rail overlaps the editor: AI at x %.0f", box.X)
+	}
+	if box.Y <= 100 {
+		t.Errorf("the rail starts above the editor: AI at y %.0f", box.Y)
 	}
 }

@@ -94,6 +94,8 @@ type App struct {
 	TermPercent float32
 	// SettingsOpen shows the settings page in the active column.
 	SettingsOpen bool
+	// tabMenuAct is a tab context menu's choice, run after the rows are built.
+	tabMenuAct *tabAction
 	// Prefs are the app's preferences, from settings.json.
 	Prefs preferences
 	// Capability toggles in the extensions view.

@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 
@@ -28,6 +29,7 @@ func (a *App) columnTabs(c *ui.Context, idx int) {
 				})
 			})
 		}
+		a.runTabMenuAction()
 		ui.Box(c).Width(1).Height(theme.TabStripH).Background(theme.BorderSoft)
 		ui.Row(c).PaddingX(6).Gap(2).AlignItems(ui.Center).Children(func() {
 			split := ui.ButtonBase(c).Size(26, 24).Radius(4).Label("拆分编辑器").Tooltip(a.splitHint()).
@@ -83,6 +85,7 @@ func (a *App) tab(c *ui.Context, idx, i int, e *document.Editor, chosen bool) {
 		a.ActiveCol = idx
 		a.Cols[idx].Active = i
 	})
+	tab.ContextMenu(func(m *ui.Menu) { a.tabMenu(m, idx, e.Doc) })
 }
 
 // closeTabIn closes d in column idx, asking to save it first when dirty,
@@ -205,4 +208,98 @@ func (a *App) emptyColumn(c *ui.Context, col *document.Column) {
 			}
 		}
 	})
+}
+
+// tabAction is a tab menu's choice, run after the rows were built.
+type tabAction struct {
+	kind string
+	idx  int
+	doc  *document.Document
+}
+
+// tabMenu adds the tab actions to a tab's context menu.
+func (a *App) tabMenu(m *ui.Menu, idx int, d *document.Document) {
+	if m.Item("关闭").Shortcut(ui.Cmd, ui.KeyW).Chosen() {
+		a.tabMenuAct = &tabAction{kind: "close", idx: idx, doc: d}
+	}
+	if m.Item("关闭其他").Chosen() {
+		a.tabMenuAct = &tabAction{kind: "closeOthers", idx: idx, doc: d}
+	}
+	if m.Item("关闭已保存").Chosen() {
+		a.tabMenuAct = &tabAction{kind: "closeSaved", idx: idx, doc: d}
+	}
+	m.Separator()
+	if m.Item("复制路径").Chosen() {
+		a.tabMenuAct = &tabAction{kind: "copyPath", idx: idx, doc: d}
+	}
+	if m.Item("在文件管理器中显示").Chosen() {
+		a.tabMenuAct = &tabAction{kind: "reveal", idx: idx, doc: d}
+	}
+}
+
+// runTabMenuAction runs the tab menu's choice after the rows are built,
+// so an action that closes tabs does not change the slice under the loop.
+func (a *App) runTabMenuAction() {
+	act := a.tabMenuAct
+	a.tabMenuAct = nil
+	if act == nil {
+		return
+	}
+	switch act.kind {
+	case "close":
+		a.closeTabIn(act.idx, act.doc)
+	case "closeOthers":
+		a.closeOthersIn(act.idx, act.doc)
+	case "closeSaved":
+		a.closeSavedIn(act.idx)
+	case "copyPath":
+		mygo.Clipboard.WriteText(act.doc.Path)
+		a.say("已复制路径 " + act.doc.Path)
+	case "reveal":
+		mygo.Shell.ShowItemInFolder(act.doc.Path)
+	}
+}
+
+// closeOthersIn closes the clean tabs of a column except d.
+func (a *App) closeOthersIn(idx int, d *document.Document) {
+	col := a.Cols[idx]
+	skipped := 0
+	for i := len(col.Editors) - 1; i >= 0; i-- {
+		e := col.Editors[i]
+		if e.Doc == d {
+			continue
+		}
+		if e.Doc.Dirty() {
+			skipped++
+			continue
+		}
+		col.Remove(i)
+	}
+	a.collapseEmptyColumns()
+	a.pruneDocs()
+	a.updateTitle()
+	a.SaveState()
+	if skipped > 0 {
+		a.say("已关闭其他标签；有未保存修改的标签保留")
+	} else {
+		a.say("已关闭其他标签")
+	}
+}
+
+// closeSavedIn closes the column's tabs that have no unsaved change.
+func (a *App) closeSavedIn(idx int) {
+	col := a.Cols[idx]
+	closed := 0
+	for i := len(col.Editors) - 1; i >= 0; i-- {
+		if col.Editors[i].Doc.Dirty() {
+			continue
+		}
+		col.Remove(i)
+		closed++
+	}
+	a.collapseEmptyColumns()
+	a.pruneDocs()
+	a.updateTitle()
+	a.SaveState()
+	a.say("已关闭 " + itoa(closed) + " 个已保存标签")
 }

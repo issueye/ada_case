@@ -290,8 +290,10 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | M3（核心完成） | status/SCM 面板、diff 页、逐 hunk 暂存、提交、历史 | 测试 64 个全绿；hunk 暂存用 `hash-object` + `update-index`（用例验证只动选中的块）；冲突/三方与 remote 操作待做 |
 | 2026-11-17 | M4（完成） | OpenAI 流式客户端、三态 AI 面板、流式 markdown、diff 卡片与确认应用、取消/重试、Key 入 Secrets | 测试 81 个全绿；AI 客户端的 SSE/取消用 httptest 验证；应用 diff 有测试；真机调用真实模型未验证（无 Key） |
 | 2026-11-17 | M5（完成） | 终端分栏、设置页与 settings.json、能力面板 | 终端在真机跑起 PowerShell；测试 86 个全绿；libghostty-vt 首次由缓存下载；i18n 未做 |
-| 2026-11-17 | 明暗主题（追加） | 浅色板与浅色编辑器、标题栏/设置/快捷键切换、`theme` 入 settings.json | 测试 87 个全绿；真机浅色截图 `_shots/lightcode-light.png` |
+| 2026-11-17 | 明暗主题（追加） | 浅色板与浅色编辑器、标题栏/设置/快捷键切换、	heme 入 settings.json | 测试 87 个全绿；真机浅色截图 _shots/lightcode-light.png |
+| 2026-11-17 | UI 修正 | 标签右键菜单（关闭/关闭其他/关闭已保存/复制路径/显示）；AI 收起栏位并入编辑区（去掉右侧白条） | 测试 90 个全绿；浅色收起态截图 _shots/lightcode-light-rail.png |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
+
 
 
 
