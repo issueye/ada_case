@@ -12,7 +12,7 @@ import (
 )
 
 // Version is the schema of the state this build writes.
-const Version = 2
+const Version = 3
 
 // State is what the next run starts with.
 type State struct {
@@ -33,15 +33,19 @@ type State struct {
 	// SidebarOpen and SidebarView are the sidebar's state.
 	SidebarOpen bool `json:"sidebarOpen"`
 	SidebarView int  `json:"sidebarView"`
-	// AIDocked is whether the AI panel shows docked rather than as the rail.
-	AIDocked bool `json:"aiDocked"`
+	// AIMode is how the assistant shows: 0 docked, 1 floating, 2 the rail.
+	AIMode int `json:"aiMode,omitempty"`
+	// AIBaseURL and AIModel configure the assistant; the key lives in the
+	// system's secret store, not in this file.
+	AIBaseURL string `json:"aiBaseURL,omitempty"`
+	AIModel   string `json:"aiModel,omitempty"`
 	// Zoom is the window content's zoom, 1 for none.
 	Zoom float32 `json:"zoom,omitempty"`
 }
 
 // Default is the state a first run starts with.
 func Default() State {
-	return State{Version: Version, SidebarOpen: true, AIDocked: true, Zoom: 1}
+	return State{Version: Version, SidebarOpen: true, Zoom: 1}
 }
 
 // Path is where the app keeps its state: LIGHTCODE_STATE when set, else

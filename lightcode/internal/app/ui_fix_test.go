@@ -31,7 +31,7 @@ func TestPaletteScrollsAllCommands(t *testing.T) {
 // its own, clear of the editor.
 func TestAIRailKeepsItsOwnStrip(t *testing.T) {
 	a, _ := testWorkspace(t)
-	a.AIDocked = false
+	a.AI.Mode = AIRail
 	tt := ui.NewTester(a.View, 1280, 820)
 	box, ok := tt.Find("AI")
 	if !ok {

@@ -83,8 +83,8 @@ func TestToggleSidebarAndAI(t *testing.T) {
 	tt.Key(ui.Cmd|ui.Shift, ui.KeyP)
 	tt.Type("AI")
 	tt.Key(0, ui.KeyEnter)
-	if a.AIDocked {
-		t.Errorf("AI panel still docked after its command")
+	if a.AI.Mode != AIRail {
+		t.Errorf("AI panel did not collapse")
 	}
 	if !tt.HasText("AI") {
 		t.Errorf("the AI rail is missing")

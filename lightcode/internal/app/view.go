@@ -23,9 +23,10 @@ func (a *App) View(c *ui.Context) {
 				a.sidebar(c)
 			}
 			a.editorArea(c)
-			if a.AIDocked {
+			switch a.AI.Mode {
+			case AIDock:
 				a.aiPanel(c)
-			} else {
+			case AIRail:
 				a.aiRail(c)
 			}
 		})
@@ -35,6 +36,8 @@ func (a *App) View(c *ui.Context) {
 	a.closeConfirmOverlay(c)
 	a.fileOpOverlay(c)
 	a.discardOverlay(c)
+	a.aiFloat(c)
+	a.aiSettingsOverlay(c)
 }
 
 // bindWindowKeys binds the commands' keys for the whole window: the

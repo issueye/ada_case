@@ -24,7 +24,12 @@ func (a *App) restoreState() {
 	a.Zoom = st.Zoom
 	a.SidebarOpen = st.SidebarOpen
 	a.SidebarView = st.SidebarView
-	a.AIDocked = st.AIDocked
+	if st.AIMode >= AIDock && st.AIMode <= AIRail {
+		a.AI.Mode = st.AIMode
+	}
+	a.AI.SetBase = st.AIBaseURL
+	a.AI.SetModel = st.AIModel
+	a.initAI()
 	if a.WS == nil || !samePath(st.Workspace, a.WS.Root) {
 		return
 	}
@@ -68,7 +73,9 @@ func (a *App) SaveState() {
 	st := settings.Default()
 	st.SidebarOpen = a.SidebarOpen
 	st.SidebarView = a.SidebarView
-	st.AIDocked = a.AIDocked
+	st.AIMode = a.AI.Mode
+	st.AIBaseURL = a.AI.Config.BaseURL
+	st.AIModel = a.AI.Config.Model
 	st.Zoom = a.Zoom
 	st.Active = a.Cols[0].Active
 	st.ActiveCol = a.ActiveCol

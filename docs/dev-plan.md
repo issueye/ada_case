@@ -131,7 +131,7 @@ type Command struct {
 | 构建 / 静态检查 / 测试 | 全绿 | `go build`、`go vet`、`go test ./...` 全绿 | 6 个包 28 个用例（M1 后） |
 | 界面 | 与主窗稿并排 ≥ 85% | 标题栏/活动栏/侧栏/标签/面包屑/编辑器/状态栏/AI 停靠均已就位 | `_shots/lightcode-m0.png`、`_shots/lightcode-ui-*.png` |
 
-已知差距（M1、M2 已完成，M3 核心完成）：M1-1～M1-6、M1-8 与 M2-1～M2-5 已落地并测试；M1-7 的中文输入在无头测试通过，候选窗与真机 watcher 仍需人工确认。M3 的 status/SCM/diff/逐块暂存/提交/历史已完成；冲突三方视图、逐块丢弃、分支切换、pull/push 仍待做。AI 仍只有骨架，扩展页仍是占位。
+已知差距（M1、M2 已完成，M3 核心完成，M4 完成）：M1-1～M1-6、M1-8 与 M2-1～M2-5 已落地并测试；M1-7 的中文输入在无头测试通过，候选窗与真机 watcher 仍需人工确认。M3 的 status/SCM/diff/逐块暂存/提交/历史已完成；冲突三方视图、逐块丢弃、分支切换、pull/push 仍待做。M4 的流式客户端、三态面板、diff 卡片与确认应用已完成；真实模型调用未验证（本机无 Key），历史持久化与浮标拖拽未做。扩展页仍是占位。
 
 > 状态在每轮结束时更新；未完成的项记 ⬜，完成的记 ✅。
 
@@ -173,6 +173,18 @@ type Command struct {
 | M3-7 | pull/push/fetch：凭证（`GIT_TERMINAL_PROMPT=0`）、被拒与分叉提示 | 不自动推送 | ⬜ |
 
 > 丢弃整文件有二次确认；逐块丢弃尚未做。分支切换 / 检出未做。
+
+### 2.5 M4 开工清单（进度）
+
+| # | 任务 | 验收 | 状态 |
+|---|---|---|---|
+| M4-1 | OpenAI 兼容流式客户端：SSE 解析、错误体、系统代理、取消；Key 从 `mygo.Secrets` / `OPENAI_API_KEY` | 流式不卡、取消 < 100 ms | ✅ `internal/ai` + SSE 用例（含取消、HTTP 错误、请求体） |
+| M4-2 | 三态面板：停靠 380 / 悬浮 380×640 / 收起 62 px 栏位卡片；模式随会话恢复 | 三态可切、不遮编辑器 | ✅ `ai.go`、`TestAIFloatOverlay`、`TestAIModePersists` |
+| M4-3 | 流式 markdown + diff 卡片：`editor.ParsePatch` 解析回答，卡片展开 `DiffView`，点「应用」才写入缓冲区，可「忽略」；取消/重试 | 流式期间可交互、失败不留半成品 | ✅ `TestAIStreamsAndAppliesDiff`、`TestAIRetryResends` |
+| M4-4 | 上下文：系统提示（只产 diff）、当前文件/选区、8000 字符上限、上下文 chip | 大文件不爆 token | ✅ `aiPrompt`（无精确 token 计数） |
+| M4-5 | 设置：Base URL / 模型 / Key 弹窗；Key 存 Secrets，Base/模型进 `state.json`（schema 3） | 重启保留配置，Key 不进明文 | ✅ `aiSettingsOverlay`、`TestAISettingsPersist` |
+
+> 未做：浮标拖拽与悬停展开、对话历史持久化、应用后的一键撤销（当前写入缓冲区、保持 dirty，可再用 Git 丢弃）、精确 token 预算。
 
 ## 3. WBS（按模块，含依赖）
 
@@ -264,4 +276,5 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | M1（完成） | 会话恢复、外部改动提示、预览标签、缩放、分屏、GBK/BOM 编码、截图基线 | 新增 `internal/settings`；分屏用 `ui.SplitPercent`；测试 33 个全绿；IME 仅无头验证 |
 | 2026-11-17 | M2（完成） | 索引、搜索面板（rg + Go 回退）、大纲、文件操作、watcher | 30k 实测：索引 37–213 ms、搜索首条 7.5 ms/全量 924 ms；测试 54 个全绿；真机 watcher 已验证（运行中新建文件可见） |
 | 2026-11-17 | M3（核心完成） | status/SCM 面板、diff 页、逐 hunk 暂存、提交、历史 | 测试 64 个全绿；hunk 暂存用 `hash-object` + `update-index`（用例验证只动选中的块）；冲突/三方与 remote 操作待做 |
+| 2026-11-17 | M4（完成） | OpenAI 流式客户端、三态 AI 面板、流式 markdown、diff 卡片与确认应用、取消/重试、Key 入 Secrets | 测试 79 个全绿；AI 客户端的 SSE/取消用 httptest 验证；应用 diff 有测试；真机调用真实模型未验证（无 Key） |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |

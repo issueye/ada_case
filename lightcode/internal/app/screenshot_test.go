@@ -19,11 +19,11 @@ func TestScreenshots(t *testing.T) {
 	tt := ui.NewTester(a.View, 1280, 820)
 	saveShot(t, tt, "lightcode-ui-editor.png")
 
-	a.AIDocked = false
+	a.AI.Mode = AIRail
 	tt.Frame()
 	saveShot(t, tt, "lightcode-ui-rail.png")
 
-	a.AIDocked = true
+	a.AI.Mode = AIDock
 	a.OpenPalette(PaletteCommands)
 	tt.Frame()
 	saveShot(t, tt, "lightcode-ui-palette.png")

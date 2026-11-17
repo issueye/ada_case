@@ -49,9 +49,9 @@ type App struct {
 	// 2 source control, 3 run, 4 extensions.
 	SidebarView int
 	SidebarOpen bool
-	// AIDocked shows the AI panel at its full width; collapsed, it is the
-	// rail floating at the right of the editor.
-	AIDocked bool
+	// AI is the assistant: its mode (docked, floating or the rail), its
+	// conversation, its stream and its configuration.
+	AI aiState
 
 	PaletteOpen  bool
 	PaletteMode  PaletteMode
@@ -66,8 +66,6 @@ type App struct {
 	ClosePrompt bool
 	// Branch is the workspace's git branch, "" without a repository.
 	Branch string
-	// AIDraft is the AI panel's input.
-	AIDraft string
 	// Search is the sidebar's search panel.
 	Search searchState
 	// Selected is the explorer's chosen entry.
@@ -115,7 +113,6 @@ func New(root, file string) *App {
 		Docs:           map[string]*document.Document{},
 		Cmds:           command.NewRegistry(),
 		SidebarOpen:    true,
-		AIDocked:       true,
 		StatePath:      settings.Path(),
 		Zoom:           1,
 		SplitPercent:   50,
@@ -273,12 +270,6 @@ func (a *App) ShowSidebar(view int) {
 	}
 	a.SidebarView = view
 	a.SidebarOpen = true
-	a.SaveState()
-}
-
-// ToggleAI docks or collapses the AI panel.
-func (a *App) ToggleAI() {
-	a.AIDocked = !a.AIDocked
 	a.SaveState()
 }
 
