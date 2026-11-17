@@ -25,13 +25,12 @@ func (a *App) View(c *ui.Context) {
 			a.editorArea(c)
 			if a.AIDocked {
 				a.aiPanel(c)
+			} else {
+				a.aiRail(c)
 			}
 		})
 		a.statusBar(c)
 	})
-	if !a.AIDocked {
-		a.aiRail(c)
-	}
 	a.paletteOverlay(c)
 	a.closeConfirmOverlay(c)
 	a.fileOpOverlay(c)

@@ -37,7 +37,8 @@ go run ./cmd/lightcode <folder> [file]
 - 编码：UTF-8、UTF-8 BOM、GBK 自动识别并原样写回；二进制文件拒绝打开。
 - 编辑：`ui/editor` 的语法高亮、多光标、折叠、查找替换、跳转到行、Git 改动条（未接 Git 时为空白）。
 - 快速打开 `Ctrl+P` 与命令面板 `Ctrl+Shift+P`（模糊匹配、↑↓ 选择、Enter 执行）。
-- 视图：`Ctrl+B` 侧栏；`Ctrl+Shift+E/F/G/X` 切换侧栏视图；`Ctrl+=` / `Ctrl+-` / `Ctrl+0` 缩放；`Ctrl+\` 拆分/关闭分屏（`ui.SplitPercent`，拖动分隔条；两列共享同一 Document 的 undo）；AI 面板停靠 380 宽，收起后变成右侧 48×172 浮标，点浮标展开。
+- 视图：`Ctrl+B` 侧栏；`Ctrl+Shift+E/F/G/X` 切换侧栏视图；`Ctrl+=` / `Ctrl+-` / `Ctrl+0` 缩放；`Ctrl+\` 拆分/关闭分屏（`ui.SplitPercent`，拖动分隔条；两列共享同一 Document 的 undo）；AI 面板停靠 380 宽，收起后缩为右侧 62 px 独立栏位中的 48×172 卡片（不压住编辑器与滚动条），点卡片展开。
+- 命令面板可滚动（`ui.Scroll`，↑↓ 选择会自动滚到可见处），`打开文件夹…` 等靠后的命令都能找到。
 - 状态栏：分支（读 `.git/HEAD`）、消息、行列、缩进、编码、行尾、语言、AI。
 
 分屏会随会话恢复（左/右列的文件、哪列活动、分隔比例都记在 `state.json`）；IME 的中文输入有无头测试，候选窗与真机文件监视仍需人工确认。

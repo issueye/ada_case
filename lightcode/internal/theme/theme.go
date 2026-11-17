@@ -24,6 +24,7 @@ const (
 	RowH       = 24
 	SectionH   = 28
 	AIDockW    = 380
+	AIRailW    = 62
 	TerminalH  = 200
 	WindowMinW = 960
 	WindowMinH = 600

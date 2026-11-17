@@ -86,7 +86,10 @@ func (a *App) paletteOverlay(c *ui.Context) {
 	if sel < 0 {
 		sel = 0
 	}
-	maxRows := min(len(entries), 8)
+	shown := len(entries)
+	if shown > 200 {
+		shown = 200
+	}
 	placeholder := "搜索文件…"
 	if a.PaletteMode == PaletteCommands {
 		placeholder = "输入命令…"
@@ -132,16 +135,21 @@ func (a *App) paletteOverlay(c *ui.Context) {
 					ui.Text(c, mode).FontSize(10).TextColor(theme.Faint)
 				})
 				ui.Box(c).Height(1).Background(theme.BorderSoft)
-				ui.Column(c).Grow(1).PaddingY(4).Children(func() {
-					if len(entries) == 0 {
-						ui.Row(c).Height(38).PaddingX(12).AlignItems(ui.Center).Children(func() {
-							ui.Text(c, "没有匹配项").FontSize(12).TextColor(theme.Faint)
-						})
-						return
-					}
-					for i := 0; i < maxRows; i++ {
-						a.paletteRow(c, entries[i], i == sel)
-					}
+				ui.Scroll(c).Grow(1).MaxHeight(340).Children(func() {
+					ui.Column(c).PaddingY(4).Children(func() {
+						if len(entries) == 0 {
+							ui.Row(c).Height(38).PaddingX(12).AlignItems(ui.Center).Children(func() {
+								ui.Text(c, "没有匹配项").FontSize(12).TextColor(theme.Faint)
+							})
+							return
+						}
+						for i := 0; i < shown; i++ {
+							row := a.paletteRow(c, entries[i], i == sel)
+							if i == sel {
+								row.ScrollIntoView()
+							}
+						}
+					})
 				})
 				ui.Box(c).Height(1).Background(theme.BorderSoft)
 				ui.Row(c).Height(26).PaddingX(12).Gap(12).AlignItems(ui.Center).Children(func() {
@@ -160,7 +168,7 @@ func (a *App) paletteOverlay(c *ui.Context) {
 	})
 }
 
-func (a *App) paletteRow(c *ui.Context, e paletteEntry, active bool) {
+func (a *App) paletteRow(c *ui.Context, e paletteEntry, active bool) ui.Element {
 	row := ui.Row(c).Height(30).PaddingX(12).Gap(8).AlignItems(ui.Center).
 		Cursor(ui.CursorPointer)
 	row.Children(func() {
@@ -190,6 +198,7 @@ func (a *App) paletteRow(c *ui.Context, e paletteEntry, active bool) {
 		e.run()
 		a.closePalette()
 	})
+	return row
 }
 
 func (a *App) runPalette() {
