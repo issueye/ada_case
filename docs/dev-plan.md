@@ -179,7 +179,7 @@ type Command struct {
 | # | 任务 | 验收 | 状态 |
 |---|---|---|---|
 | M4-1 | OpenAI 兼容流式客户端：SSE 解析、错误体、系统代理、取消；Key 从 `mygo.Secrets` / `OPENAI_API_KEY` | 流式不卡、取消 < 100 ms | ✅ `internal/ai` + SSE 用例（含取消、HTTP 错误、请求体） |
-| M4-2 | 三态面板：停靠 380 / 悬浮 380×640 / 收起 62 px 栏位卡片（悬停预览上一轮回答）；模式随会话恢复 | 三态可切、不遮编辑器 | ✅ `ai.go`、`TestAIFloatOverlay`、`TestAIRailHoverPeek`、`TestAIModePersists` |
+| M4-2 | 三态面板：停靠 380 / 悬浮 380×640 / 收起为右侧浮动 48×172 卡片（不占布局；悬停预览上一轮回答）；模式随会话恢复 | 三态可切、不遮编辑器 | ✅ `ai.go`、`TestAIFloatOverlay`、`TestAIRailHoverPeek`、`TestAIModePersists` |
 | M4-3 | 流式 markdown + diff 卡片：`editor.ParsePatch` 解析回答，卡片展开 `DiffView`，点「应用」才写入缓冲区，可「忽略」；取消/重试 | 流式期间可交互、失败不留半成品 | ✅ `TestAIStreamsAndAppliesDiff`、`TestAIRetryResends` |
 | M4-4 | 上下文：系统提示（只产 diff）、当前文件/选区、8000 字符上限、上下文 chip | 大文件不爆 token | ✅ `aiPrompt`（无精确 token 计数） |
 | M4-5 | 设置：Base URL / 模型 / Key 弹窗；Key 存 Secrets，Base/模型进 `state.json`（schema 3） | 重启保留配置，Key 不进明文 | ✅ `aiSettingsOverlay`、`TestAISettingsPersist` |
@@ -246,7 +246,7 @@ type Command struct {
 | 活动栏 | 48 | 5 图标（资源管理器/搜索/源代码管理/运行/扩展）+ 底部设置 |
 | 侧栏 | 240（可拖 180–360） | 分节标题 28，行高 24 |
 | 编辑区 | 余量（AI 收起 772→1152） | 标签 36、面包屑 28 |
-| AI 停靠 | 380 | 收起为右侧 62 px 独立栏位里的 48×172 卡片（不遮挡编辑器） |
+| AI 停靠 | 380 | 收起为右侧浮动的 48×172 卡片（不占布局、无空列；悬停预览） |
 | 状态栏 | 24 | 分支/诊断/位置/编码/行尾/语言 |
 | 终端 | 200（折叠 32） | 底部 |
 
@@ -293,6 +293,7 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | 明暗主题（追加） | 浅色板与浅色编辑器、标题栏/设置/快捷键切换、	heme 入 settings.json | 测试 87 个全绿；真机浅色截图 _shots/lightcode-light.png |
 | 2026-11-17 | UI 修正 | 标签右键菜单（关闭/关闭其他/关闭已保存/复制路径/显示）；AI 收起栏位并入编辑区（去掉右侧白条） | 测试 90 个全绿；浅色收起态截图 _shots/lightcode-light-rail.png |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
+
 
 
 

@@ -319,13 +319,17 @@ func chip(c *ui.Context, ic *ui.SVG, label string) {
 	})
 }
 
-// aiRail is the collapsed assistant: a 48×172 card in its own 62 DIP
-// strip at the right of the editor.
+// aiRail is the collapsed assistant: a 48×172 card floating at the right
+// of the window, clear of the layout, so that it leaves no empty column.
 func (a *App) aiRail(c *ui.Context) {
-	ui.Column(c).Width(theme.AIRailW).FillHeight().Background(theme.Background).
-		BorderWidth(0, 1, 0, 0).BorderColor(theme.BorderSoft).
-		Justify(ui.Center).AlignItems(ui.Start).Children(func() {
-		card := ui.Column(c).Width(48).Height(172).Radius(10).Background(theme.Panel).Border(1, theme.Border).
+	_, height := c.Size()
+	top := float32(theme.TitleBarH) + (height-float32(theme.TitleBarH)-float32(theme.StatusBarH))/2 - 86
+	if top < float32(theme.TitleBarH)+8 {
+		top = float32(theme.TitleBarH) + 8
+	}
+	ui.Overlay(c, func() {
+		card := ui.Column(c).Absolute().Right(14).Top(top).Width(48).Height(172).
+			Radius(10).Background(theme.Panel).Border(1, theme.Border).
 			Shadow(0, 12, 30, 0, ui.RGBA(0, 0, 0, 0.5)).
 			AlignItems(ui.Center).PaddingY(8).Gap(6)
 		card.Children(func() {

@@ -27,9 +27,9 @@ func TestPaletteScrollsAllCommands(t *testing.T) {
 	}
 }
 
-// TestAIRailKeepsItsOwnStrip puts the collapsed assistant in a strip of
-// its own, clear of the editor.
-func TestAIRailKeepsItsOwnStrip(t *testing.T) {
+// TestAIRailFloatsRight keeps the collapsed assistant a floating card at
+// the right, clear of the layout (no empty column).
+func TestAIRailFloatsRight(t *testing.T) {
 	a, _ := testWorkspace(t)
 	a.AI.Mode = AIRail
 	tt := ui.NewTester(a.View, 1280, 820)
@@ -39,7 +39,7 @@ func TestAIRailKeepsItsOwnStrip(t *testing.T) {
 	}
 	// The editor ends where the rail's 62 DIP strip starts, at 1280-62,
 	// and the rail starts under the tab strip and breadcrumbs.
-	if box.X < 1280-62 {
+	if box.X < 1218 {
 		t.Errorf("the rail overlaps the editor: AI at x %.0f", box.X)
 	}
 	if box.Y <= 100 {
