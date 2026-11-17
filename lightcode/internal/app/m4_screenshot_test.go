@@ -38,4 +38,11 @@ func TestM4Screenshots(t *testing.T) {
 	tt.Move(1242, 418)
 	tt.Frame()
 	saveShot(t, tt, "lightcode-ui-ai-peek.png")
+
+	// Drag the rail card over the code.
+	tt.Press(a.Prefs.AIRailX+24, a.Prefs.AIRailY+60)
+	tt.Move(720, 260)
+	tt.Release(720, 260)
+	tt.Frame()
+	saveShot(t, tt, "lightcode-ui-ai-drag.png")
 }

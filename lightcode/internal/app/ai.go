@@ -22,15 +22,19 @@ func (a *App) aiPanel(c *ui.Context) {
 	})
 }
 
-// aiFloat is the assistant floating over the editor, 380×640.
+// aiFloat is the assistant floating over the editor, 380×640, where the
+// user last left it; its head drags it.
 func (a *App) aiFloat(c *ui.Context) {
 	if a.AI.Mode != AIFloat {
 		return
 	}
+	x, y := a.aiPosition(0)
 	ui.Overlay(c, func() {
-		card := ui.Column(c).Absolute().Right(14).Top(float32(theme.TitleBarH)+16).Width(380).Height(640).
+		card := ui.Column(c).Absolute().Left(x).Top(y).Width(380).Height(640).
 			Radius(10).Background(theme.Panel).Border(1, theme.Border).
-			Shadow(0, 16, 40, 0, ui.RGBA(0, 0, 0, 0.55))
+			Shadow(0, 16, 40, 0, ui.RGBA(0, 0, 0, 0.55)).
+			Cursor(ui.CursorGrab)
+		card.HandleInput(a.dragAI(0))
 		card.Children(func() {
 			a.aiHeader(c)
 			a.aiBody(c)
@@ -89,13 +93,11 @@ func (a *App) aiBody(c *ui.Context) {
 
 // aiRailPeek previews the last answer while the rail card is hovered.
 func (a *App) aiRailPeek(c *ui.Context) {
-	_, height := c.Size()
-	top := float32(theme.TitleBarH) + (height-float32(theme.TitleBarH)-float32(theme.StatusBarH))/2 - 100
-	if top < float32(theme.TitleBarH)+8 {
-		top = float32(theme.TitleBarH) + 8
-	}
+	px := a.Prefs.AIRailX - 340
+	py := a.Prefs.AIRailY + 40
+	px, py = a.clampAI(px, py, 330, 200)
 	ui.Overlay(c, func() {
-		card := ui.Column(c).Absolute().Right(float32(theme.AIRailW)+10).Top(top).Width(330).
+		card := ui.Column(c).Absolute().Left(px).Top(py).Width(330).
 			Padding(12).Gap(6).Radius(8).Background(theme.Panel).Border(1, theme.AI).
 			Shadow(0, 12, 30, 0, ui.RGBA(0, 0, 0, 0.5))
 		card.Children(func() {
@@ -322,16 +324,13 @@ func chip(c *ui.Context, ic *ui.SVG, label string) {
 // aiRail is the collapsed assistant: a 48×172 card floating at the right
 // of the window, clear of the layout, so that it leaves no empty column.
 func (a *App) aiRail(c *ui.Context) {
-	_, height := c.Size()
-	top := float32(theme.TitleBarH) + (height-float32(theme.TitleBarH)-float32(theme.StatusBarH))/2 - 86
-	if top < float32(theme.TitleBarH)+8 {
-		top = float32(theme.TitleBarH) + 8
-	}
+	x, y := a.aiPosition(1)
 	ui.Overlay(c, func() {
-		card := ui.Column(c).Absolute().Right(14).Top(top).Width(48).Height(172).
+		card := ui.Column(c).Absolute().Left(x).Top(y).Width(48).Height(172).
 			Radius(10).Background(theme.Panel).Border(1, theme.Border).
 			Shadow(0, 12, 30, 0, ui.RGBA(0, 0, 0, 0.5)).
-			AlignItems(ui.Center).PaddingY(8).Gap(6)
+			AlignItems(ui.Center).PaddingY(8).Gap(6).Cursor(ui.CursorGrab)
+		card.HandleInput(a.dragAI(1))
 		card.Children(func() {
 			ui.Icon(c, icons.Sparkles).FontSize(20).TextColor(theme.AI).Tooltip("AI 助手（已收起）")
 			ui.Box(c).Width(24).Height(1).Background(theme.BorderSoft)
@@ -355,4 +354,128 @@ func (a *App) aiRail(c *ui.Context) {
 			card.Border(1, theme.AI)
 		}
 	})
+}
+
+// aiDragState tracks a pointer dragging the floating assistant or its rail.
+type aiDragState struct {
+	active bool
+	target int
+	lastX  float32
+	lastY  float32
+	movedX float32
+	movedY float32
+}
+
+// aiPosition returns the top-left of the floating panel (target 0) or the
+// rail card (1), defaulting to the right edge and clamped to the window.
+func (a *App) aiPosition(target int) (float32, float32) {
+	w, h := float32(380), float32(640)
+	x, y := a.Prefs.AIFloatX, a.Prefs.AIFloatY
+	if target == 1 {
+		w, h = 48, 172
+		x, y = a.Prefs.AIRailX, a.Prefs.AIRailY
+	}
+	thisW, thisH := a.viewW, a.viewH
+	if thisW <= 0 || thisH <= 0 {
+		thisW, thisH = 1280, 820
+	}
+	if x == 0 && y == 0 {
+		x = thisW - w - 14
+		if target == 0 {
+			y = float32(theme.TitleBarH) + 16
+		} else {
+			y = (thisH - float32(theme.StatusBarH)) / 2
+			y -= h / 2
+		}
+	}
+	x, y = a.clampAI(x, y, w, h)
+	if target == 0 {
+		a.Prefs.AIFloatX, a.Prefs.AIFloatY = x, y
+	} else {
+		a.Prefs.AIRailX, a.Prefs.AIRailY = x, y
+	}
+	return x, y
+}
+
+func (a *App) clampAI(x, y, w, h float32) (float32, float32) {
+	W, H := a.viewW, a.viewH
+	if W <= 0 || H <= 0 {
+		W, H = 1280, 820
+	}
+	minX, minY := float32(8), float32(theme.TitleBarH)+8
+	maxX := W - w - 8
+	maxY := H - float32(theme.StatusBarH) - h - 8
+	if maxX < minX {
+		maxX = minX
+	}
+	if maxY < minY {
+		maxY = minY
+	}
+	if x < minX {
+		x = minX
+	}
+	if x > maxX {
+		x = maxX
+	}
+	if y < minY {
+		y = minY
+	}
+	if y > maxY {
+		y = maxY
+	}
+	return x, y
+}
+
+// dragAI drags the floating panel (target 0) or the rail card (1) by the
+// pointer; buttons inside them take their own presses first.
+func (a *App) dragAI(target int) func(ui.InputEvent) bool {
+	return func(ev ui.InputEvent) bool {
+		st := &a.aiDrag
+		switch ev.Kind {
+		case ui.InputPointerDown:
+			if ev.Button != 0 {
+				return false
+			}
+			st.active = true
+			st.target = target
+			st.lastX, st.lastY = ev.X, ev.Y
+			st.movedX, st.movedY = 0, 0
+			return true
+		case ui.InputPointerMove:
+			if !st.active || st.target != target {
+				return false
+			}
+			dx := ev.X - st.lastX + st.movedX
+			dy := ev.Y - st.lastY + st.movedY
+			ax, ay := a.moveAI(target, dx, dy)
+			st.movedX, st.movedY = ax, ay
+			st.lastX, st.lastY = ev.X, ev.Y
+			return true
+		case ui.InputPointerUp:
+			if !st.active {
+				return false
+			}
+			st.active = false
+			savePrefs(a.Prefs)
+			return true
+		}
+		return false
+	}
+}
+
+// moveAI moves a panel by dx, dy and reports how far it actually moved
+// after the window's edges clamped it.
+func (a *App) moveAI(target int, dx, dy float32) (float32, float32) {
+	w, h := float32(380), float32(640)
+	var x, y *float32
+	if target == 0 {
+		x, y = &a.Prefs.AIFloatX, &a.Prefs.AIFloatY
+	} else {
+		w, h = 48, 172
+		x, y = &a.Prefs.AIRailX, &a.Prefs.AIRailY
+	}
+	ox, oy := *x, *y
+	nx, ny := a.clampAI(ox+dx, oy+dy, w, h)
+	*x, *y = nx, ny
+	return nx - ox, ny - oy
 }

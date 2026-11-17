@@ -16,6 +16,10 @@ type preferences struct {
 	Theme           string `json:"theme,omitempty"`
 	AIEnabled       bool   `json:"aiEnabled,omitempty"`
 	TerminalEnabled bool   `json:"terminalEnabled,omitempty"`
+	// Positions of the floating assistant and its collapsed card, DIPs
+	// from the window's top left; 0 for the defaults.
+	AIFloatX, AIFloatY float32
+	AIRailX, AIRailY   float32
 }
 
 // defaultPreferences is what a first run uses.

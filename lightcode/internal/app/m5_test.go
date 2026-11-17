@@ -173,3 +173,47 @@ func TestTabContextMenu(t *testing.T) {
 	}
 	tt.CloseMenu()
 }
+
+// TestAIDragFloatingAndRail drags the floating panel and the collapsed
+// card, which can sit over the code.
+func TestAIDragFloatingAndRail(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.AI.Mode = AIFloat
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.Frame()
+	x0 := a.Prefs.AIFloatX
+	tt.Press(950, 70)
+	tt.Move(850, 70)
+	tt.Release(850, 70)
+	tt.Frame()
+	if a.Prefs.AIFloatX >= x0 {
+		t.Errorf("the floating panel did not drag: x %.0f -> %.0f", x0, a.Prefs.AIFloatX)
+	}
+
+	a.AI.Mode = AIRail
+	tt.Frame()
+	rx0 := a.Prefs.AIRailX
+	tt.Press(1240, 360)
+	tt.Move(1120, 300)
+	tt.Release(1120, 300)
+	tt.Frame()
+	if a.Prefs.AIRailX >= rx0 {
+		t.Errorf("the rail did not drag: x %.0f -> %.0f", rx0, a.Prefs.AIRailX)
+	}
+	if a.Prefs.AIRailY >= 312 {
+		t.Errorf("the rail did not move up: y %.0f", a.Prefs.AIRailY)
+	}
+	// It stays inside the window: dragging left of the edge clamps.
+	tt.Press(a.Prefs.AIRailX+20, a.Prefs.AIRailY+20)
+	tt.Move(-500, -500)
+	tt.Release(-500, -500)
+	tt.Frame()
+	if a.Prefs.AIRailX < 8 || a.Prefs.AIRailY < 48 {
+		t.Errorf("the rail left the window: %.0f, %.0f", a.Prefs.AIRailX, a.Prefs.AIRailY)
+	}
+	// The position survives a restart.
+	a2 := New(dir, "")
+	if a2.Prefs.AIRailX != a.Prefs.AIRailX || a2.Prefs.AIRailY != a.Prefs.AIRailY {
+		t.Errorf("restored rail = %.0f, %.0f", a2.Prefs.AIRailX, a2.Prefs.AIRailY)
+	}
+}

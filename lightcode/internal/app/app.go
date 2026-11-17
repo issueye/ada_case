@@ -94,7 +94,11 @@ type App struct {
 	TermPercent float32
 	// SettingsOpen shows the settings page in the active column.
 	SettingsOpen bool
-	// tabMenuAct is a tab context menu's choice, run after the rows are built.
+	// viewW and viewH are the window's content size, for dragging overlays.
+	viewW, viewH float32
+	// aiDrag is a pointer drag of the floating assistant.
+	aiDrag aiDragState
+	// tabMenuAct is a tab context menu''s choice, run after the rows are built.
 	tabMenuAct *tabAction
 	// Prefs are the app's preferences, from settings.json.
 	Prefs preferences
