@@ -1,6 +1,9 @@
 package app
 
 import (
+	"time"
+	"unicode/utf8"
+
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"github.com/egoist/mygo/ui/markdown"
@@ -62,18 +65,55 @@ func (a *App) aiBody(c *ui.Context) {
 				a.aiIntro(c)
 				return
 			}
-			for _, m := range a.AI.Messages {
+			pending := false
+			for i := range a.AI.Messages {
+				m := &a.AI.Messages[i]
 				if m.Role == "user" {
 					a.aiUserMessage(c, m.Content)
 					continue
 				}
+				if a.revealAI(m) {
+					pending = true
+				}
 				a.aiAnswer(c, m)
 			}
-			if a.AI.Streaming {
-				ui.Text(c, "▍").FontSize(11).TextColor(theme.AI)
+			if a.AI.Streaming || pending {
+				ui.Box(c).Height(1).ScrollIntoView()
+			}
+			if pending {
+				c.After(16 * time.Millisecond)
 			}
 		})
 	})
+}
+
+// revealAI shows a few more runes of the answer, as a typewriter: the
+// network may deliver a whole reply at once, the view still types it.
+// It reports whether more is left to show.
+func (a *App) revealAI(m *aiMessage) bool {
+	if m.Full == "" || m.Full == m.Content {
+		if m.Full != "" {
+			m.Content = m.Full
+		}
+		return false
+	}
+	runes := []rune(m.Full)
+	shown := utf8.RuneCountInString(m.Content)
+	if shown >= len(runes) {
+		m.Content = m.Full
+		return false
+	}
+	remaining := len(runes) - shown
+	step := 2
+	if !a.AI.Streaming || remaining > 300 {
+		step = remaining/40 + 2
+	}
+	next := shown + step
+	if next > len(runes) {
+		next = len(runes)
+	}
+	m.Content = string(runes[:next])
+	return next < len(runes)
 }
 
 // aiIntro is what the panel shows before the first question.
@@ -105,7 +145,7 @@ func (a *App) aiUserMessage(c *ui.Context, text string) {
 
 // aiAnswer is an assistant turn: its markdown, its diff cards and its
 // error with a retry.
-func (a *App) aiAnswer(c *ui.Context, m aiMessage) {
+func (a *App) aiAnswer(c *ui.Context, m *aiMessage) {
 	if m.Content != "" {
 		ui.Column(c).Children(func() {
 			markdown.View(c, m.Content, nil)

@@ -33,6 +33,9 @@ type aiMessage struct {
 	Diff []*aiDiffCard
 	// Err is why this turn failed, for the retry.
 	Err string
+	// Full is the text received; Content the part shown so far, which
+	// the view reveals a few runes at a time, as a typewriter.
+	Full string
 }
 
 // aiDiffCard is one file's change in an answer: the text before and after,
@@ -128,6 +131,11 @@ func (a *App) SendAI() {
 		a.AI.Err = "先填 API Key（保存在系统凭据库）"
 		return
 	}
+	for i := range a.AI.Messages {
+		if a.AI.Messages[i].Full != "" {
+			a.AI.Messages[i].Content = a.AI.Messages[i].Full
+		}
+	}
 	a.AI.Draft = ""
 	a.AI.Err = ""
 	a.AI.Messages = append(a.AI.Messages, aiMessage{Role: "user", Content: text})
@@ -143,7 +151,7 @@ func (a *App) SendAI() {
 	msgs := a.aiPrompt(text)
 
 	style := func(piece string) {
-		answer.Content += piece
+		answer.Full += piece
 	}
 	finalize := func(err error) {
 		if a.AI.seq != seq {
@@ -155,7 +163,10 @@ func (a *App) SendAI() {
 			a.AI.Err = err.Error()
 			return
 		}
-		answer.Diff = a.parseAIDiff(answer.Content)
+		answer.Diff = a.parseAIDiff(answer.Full)
+		if a.Win == nil {
+			answer.Content = answer.Full
+		}
 	}
 	if a.Win == nil {
 		// Tests: stream inline, as search does.
@@ -178,7 +189,7 @@ func (a *App) SendAI() {
 			last = time.Now()
 			win.Update(func() {
 				if a.AI.seq == seq {
-					answer.Content += text
+					answer.Full += text
 				}
 			})
 		}
@@ -244,8 +255,10 @@ func (a *App) aiPrompt(request string) []ai.Message {
 		out = append(out, ai.Message{Role: "system", Content: "当前文件 " + rel + "：\n```\n" + text + "\n```"})
 	}
 	for _, m := range a.AI.Messages {
-		if m.Role == "user" || (m.Role == "assistant" && m.Content != "") {
+		if m.Role == "user" {
 			out = append(out, ai.Message{Role: m.Role, Content: m.Content})
+		} else if m.Full != "" {
+			out = append(out, ai.Message{Role: m.Role, Content: m.Full})
 		}
 	}
 	return out

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/egoist/mygo/ui"
 
@@ -152,5 +153,28 @@ func TestAIFloatOverlay(t *testing.T) {
 	}
 	if !tt.HasText("Enter 发送 · 选中代码会作为上下文 · diff 需点「应用」") {
 		t.Errorf("no input hints")
+	}
+}
+
+// TestAITypewriterReveal shows the answer a few runes at a time, even when
+// the whole text arrived in one piece.
+func TestAITypewriterReveal(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.AI.Messages = []aiMessage{{Role: "assistant", Full: "你好，世界！这是打字机式的输出。"}}
+	tt := ui.NewTester(a.View, 1280, 820)
+	full := []rune(a.AI.Messages[0].Full)
+	got := []rune(a.AI.Messages[0].Content)
+	if len(got) >= len(full) {
+		t.Fatalf("the whole answer showed at once: %q", a.AI.Messages[0].Content)
+	}
+	for i := 0; i < 40 && len(got) < len(full); i++ {
+		tt.Advance(16 * time.Millisecond)
+		got = []rune(a.AI.Messages[0].Content)
+	}
+	if string(got) != string(full) {
+		t.Fatalf("reveal stopped at %q", a.AI.Messages[0].Content)
+	}
+	if tt.FramePending() {
+		t.Errorf("the view keeps asking for frames after the reveal")
 	}
 }

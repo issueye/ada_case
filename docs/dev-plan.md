@@ -276,5 +276,6 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | M1（完成） | 会话恢复、外部改动提示、预览标签、缩放、分屏、GBK/BOM 编码、截图基线 | 新增 `internal/settings`；分屏用 `ui.SplitPercent`；测试 33 个全绿；IME 仅无头验证 |
 | 2026-11-17 | M2（完成） | 索引、搜索面板（rg + Go 回退）、大纲、文件操作、watcher | 30k 实测：索引 37–213 ms、搜索首条 7.5 ms/全量 924 ms；测试 54 个全绿；真机 watcher 已验证（运行中新建文件可见） |
 | 2026-11-17 | M3（核心完成） | status/SCM 面板、diff 页、逐 hunk 暂存、提交、历史 | 测试 64 个全绿；hunk 暂存用 `hash-object` + `update-index`（用例验证只动选中的块）；冲突/三方与 remote 操作待做 |
-| 2026-11-17 | M4（完成） | OpenAI 流式客户端、三态 AI 面板、流式 markdown、diff 卡片与确认应用、取消/重试、Key 入 Secrets | 测试 79 个全绿；AI 客户端的 SSE/取消用 httptest 验证；应用 diff 有测试；真机调用真实模型未验证（无 Key） |
+| 2026-11-17 | M4（完成） | OpenAI 流式客户端、三态 AI 面板、流式 markdown、diff 卡片与确认应用、取消/重试、Key 入 Secrets | 测试 80 个全绿；AI 客户端的 SSE/取消用 httptest 验证；应用 diff 有测试；真机调用真实模型未验证（无 Key） |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
+
