@@ -17,7 +17,6 @@ func TestScreenshotBaseline(t *testing.T) {
 	a, dir := testWorkspace(t)
 	a.resetColumns()
 	a.OpenFile(filepath.Join(dir, "main.go"))
-	a.AI.Mode = AIDock
 	a.SidebarOpen = true
 	a.SidebarView = 0
 	tt := ui.NewTester(a.View, 1280, 820)

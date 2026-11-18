@@ -14,7 +14,6 @@ func TestSaveLoad(t *testing.T) {
 	in.Active = 1
 	in.SidebarOpen = false
 	in.SidebarView = 2
-	in.AIMode = 2
 	in.Zoom = 1.2
 	if err := Save(path, in); err != nil {
 		t.Fatal(err)
@@ -29,7 +28,7 @@ func TestSaveLoad(t *testing.T) {
 	if len(out.Files) != 2 || out.Files[1] != "pkg/util.go" {
 		t.Errorf("files = %v", out.Files)
 	}
-	if out.SidebarOpen || out.AIMode != 2 || out.SidebarView != 2 {
+	if out.SidebarOpen || out.SidebarView != 2 {
 		t.Errorf("layout = %+v", out)
 	}
 }
@@ -39,7 +38,7 @@ func TestLoadMissing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("missing file: %v", err)
 	}
-	if !st.SidebarOpen || st.AIMode != 0 || st.Zoom != 1 {
+	if !st.SidebarOpen || st.Zoom != 1 {
 		t.Errorf("defaults = %+v", st)
 	}
 }
@@ -72,8 +71,8 @@ func TestClamps(t *testing.T) {
 	}
 }
 
-// TestLoadV2State reads a state written before the AI modes: its layout
-// still loads, docked.
+// TestLoadV2State reads a state written by an older build: its layout
+// still loads.
 func TestLoadV2State(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "state.json")
 	old := `{"version":2,"workspace":"/w","files":["a.go"],"active":1,"sidebarOpen":false,"sidebarView":2,"aiDocked":false,"zoom":1.5}`
@@ -86,8 +85,5 @@ func TestLoadV2State(t *testing.T) {
 	}
 	if st.Version != Version || len(st.Files) != 1 || st.SidebarView != 2 || st.Zoom != 1.5 {
 		t.Errorf("migrated = %+v", st)
-	}
-	if st.AIMode != 0 {
-		t.Errorf("AI mode = %d, want docked", st.AIMode)
 	}
 }

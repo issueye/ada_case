@@ -9,8 +9,8 @@ import (
 // ToggleTheme switches between the dark and the light board.
 func (a *App) ToggleTheme() { a.UseTheme(!theme.IsLight()) }
 
-// UseTheme switches the palette, the open editors and the diff or AI cards
-// already built, and saves it in settings.json.
+// UseTheme switches the palette, the open editors and the diff page already
+// built, and saves it in settings.json.
 func (a *App) UseTheme(light bool) {
 	if light {
 		a.Prefs.Theme = "light"
@@ -44,8 +44,7 @@ func (a *App) SyncNativeTheme() {
 	})
 }
 
-// applyTheme gives the open editors, the diff page and the AI cards the
-// current palette.
+// applyTheme gives the open editors and the diff page the current palette.
 func (a *App) applyTheme() {
 	t := theme.Window()
 	for _, col := range a.Cols {
@@ -56,6 +55,4 @@ func (a *App) applyTheme() {
 	if a.Diff != nil && a.Diff.State != nil {
 		a.Diff.State.Theme = theme.Code(t)
 	}
-	// The panel draws its own cards, so it gets the palette it should use.
-	a.AIEdge.dirty = true
 }

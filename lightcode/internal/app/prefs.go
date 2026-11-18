@@ -14,17 +14,12 @@ type preferences struct {
 	SoftWrap         bool    `json:"softWrap,omitempty"`
 	// Theme is "dark" or "light"; empty reads as dark.
 	Theme           string `json:"theme,omitempty"`
-	AIEnabled       bool   `json:"aiEnabled,omitempty"`
 	TerminalEnabled bool   `json:"terminalEnabled,omitempty"`
-	// Positions of the floating assistant and its collapsed card, DIPs
-	// from the window's top left; 0 for the defaults.
-	AIFloatX, AIFloatY float32
-	AIRailX, AIRailY   float32
 }
 
 // defaultPreferences is what a first run uses.
 func defaultPreferences() preferences {
-	return preferences{EditorFontSize: 13, TerminalFontSize: 13, AIEnabled: true, TerminalEnabled: true, Theme: "dark"}
+	return preferences{EditorFontSize: 13, TerminalFontSize: 13, TerminalEnabled: true, Theme: "dark"}
 }
 
 // prefsPath is settings.json: LIGHTCODE_SETTINGS when set, else in the

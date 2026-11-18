@@ -1,6 +1,6 @@
 // Package app is the window of 轻码 IDE: the chrome (title bar, activity
-// bar, sidebar, tabs, status bar), the editors it shows, the command
-// palette, and the AI panel.
+// bar, sidebar, tabs, status bar), the editors it shows, and the command
+// palette.
 //
 // The view is a function of App's state; commands change that state and
 // MyGo builds the next frame.
@@ -52,11 +52,6 @@ type App struct {
 	// 2 source control, 3 run, 4 extensions.
 	SidebarView int
 	SidebarOpen bool
-	// AI is the assistant: its mode (docked, floating or the rail), its
-	// conversation, its stream and its configuration.
-	AI aiState
-	// AIEdge is the assistant's mounted panel: its session and frames.
-	AIEdge aiEdge
 
 	PaletteOpen  bool
 	PaletteMode  PaletteMode
@@ -203,7 +198,6 @@ func (a *App) registerCommands() {
 	add("view.scm", "源代码管理", "视图", "CmdOrCtrl+Shift+G", func() { a.ShowSidebar(2) })
 	add("view.extensions", "扩展", "视图", "CmdOrCtrl+Shift+X", func() { a.ShowSidebar(4) })
 	add("view.toggleSidebar", "切换侧栏", "视图", "CmdOrCtrl+B", a.ToggleSidebar)
-	add("view.toggleAI", "切换 AI 面板", "视图", "", a.ToggleAI)
 	add("view.zoomIn", "放大", "视图", "CmdOrCtrl+=", func() { a.SetZoom(a.Zoom + 0.1) })
 	add("view.zoomOut", "缩小", "视图", "CmdOrCtrl+-", func() { a.SetZoom(a.Zoom - 0.1) })
 	add("view.zoomReset", "重置缩放", "视图", "CmdOrCtrl+0", func() { a.SetZoom(1) })

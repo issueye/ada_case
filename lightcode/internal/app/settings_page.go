@@ -79,13 +79,6 @@ func (a *App) settingsPage(c *ui.Context) {
 						savePrefs(a.Prefs)
 					}
 				})
-				a.settingsSection(c, "AI")
-				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-					ui.Text(c, "接口与 Key").FontSize(11).TextColor(theme.Muted).Width(120)
-					if ui.Button(c, "打开 AI 设置").Clicked() {
-						a.OpenAISettings()
-					}
-				})
 				a.settingsSection(c, "会话")
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					ui.Text(c, "状态文件").FontSize(11).TextColor(theme.Muted).Width(120)
@@ -132,22 +125,6 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 				ui.Text(c, "这个版本没有可安装的扩展；这里是已编译进来的能力与它们的 provider。").
 					FontSize(10).TextColor(theme.Muted).LineHeight(1.5)
 				a.capabilityRow(c, "源代码管理", "Git CLI", a.Repo != nil)
-				ai := a.Prefs.AIEnabled
-				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-					ui.Column(c).Grow(1).Children(func() {
-						ui.Text(c, "AI 助手").FontSize(11).TextColor(theme.Text)
-						ui.Text(c, providerText(a.AI.Config.BaseURL, a.AI.Config.Model)).FontSize(9).TextColor(theme.Faint).SingleLine()
-					})
-					ui.Switch(c, &ai).Label("启用 AI 助手")
-					if ai != a.Prefs.AIEnabled {
-						a.Prefs.AIEnabled = ai
-						if !ai && a.AI.Mode == AIDock {
-							a.AI.Mode = AIRail
-						}
-						savePrefs(a.Prefs)
-					}
-				})
-				a.aiPluginRow(c)
 				term := a.Prefs.TerminalEnabled
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
@@ -176,23 +153,6 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 				}
 			})
 		})
-	})
-}
-
-// aiPluginRow shows the assistant's process plugin: whether it runs, and
-// the button that replaces it.
-func (a *App) aiPluginRow(c *ui.Context) {
-	st := a.aiPanelStatusOf()
-	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
-		ui.Column(c).Grow(1).Children(func() {
-			ui.Text(c, "AI 进程插件").FontSize(11).TextColor(theme.Text)
-			ui.Text(c, aiPanelText(st)).FontSize(9).TextColor(theme.Faint).SingleLine()
-		})
-		if st.Running {
-			if ui.Button(c, "重启").Height(20).Padding(0, 6).Radius(3).Label("重启插件").Clicked() {
-				a.RestartAI()
-			}
-		}
 	})
 }
 

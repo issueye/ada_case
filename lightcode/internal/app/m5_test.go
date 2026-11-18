@@ -16,7 +16,7 @@ func TestSettingsPageShowsAndChanges(t *testing.T) {
 	a, dir := testWorkspace(t)
 	a.RunCommand("view.settings")
 	tt := ui.NewTester(a.View, 1280, 820)
-	for _, want := range []string{"设置", "编辑器", "软换行", "终端", "打开 AI 设置"} {
+	for _, want := range []string{"设置", "编辑器", "软换行", "终端"} {
 		if !tt.HasText(want) {
 			t.Fatalf("settings misses %q; texts %q", want, tt.Texts())
 		}
@@ -44,25 +44,21 @@ func TestSettingsPageShowsAndChanges(t *testing.T) {
 	}
 }
 
-// TestCapabilitiesPanel lists providers and toggles AI off.
+// TestCapabilitiesPanel lists the providers and their toggles.
 func TestCapabilitiesPanel(t *testing.T) {
 	a, _ := testWorkspace(t)
 	a.ShowSidebar(4)
 	tt := ui.NewTester(a.View, 1280, 820)
-	for _, want := range []string{"能力", "源代码管理", "AI 助手", "终端", "ui/markdown"} {
+	for _, want := range []string{"能力", "源代码管理", "终端", "ui/markdown"} {
 		if !tt.HasText(want) {
 			t.Fatalf("capabilities misses %q; texts %q", want, tt.Texts())
 		}
 	}
-	if err := tt.Click("启用 AI 助手"); err != nil {
+	if err := tt.Click("启用终端"); err != nil {
 		t.Fatal(err)
 	}
-	if a.Prefs.AIEnabled {
-		t.Errorf("the AI switch did not turn off")
-	}
-	tt.Frame()
-	if tt.HasText("让 AI 改代码") {
-		t.Errorf("the AI panel stayed after it was disabled")
+	if a.Prefs.TerminalEnabled {
+		t.Errorf("the terminal switch did not turn off")
 	}
 }
 

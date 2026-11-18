@@ -43,10 +43,7 @@ func main() {
 		})
 		a.Win.SetTitle(a.WindowTitle())
 		_ = a.Win.SetIcon(assets.Icon)
-		a.Win.OnClosed(func() {
-			a.CloseTerminal()
-			a.CloseAI()
-		})
+		a.Win.OnClosed(a.CloseTerminal)
 		a.SyncNativeTheme()
 		a.Start()
 		if demo := os.Getenv("LIGHTCODE_DEMO"); demo != "" {
@@ -59,12 +56,6 @@ func main() {
 				a.ToggleTheme()
 			case "capabilities":
 				a.ShowSidebar(4)
-			case "ai":
-				a.SetAIMode(app.AIDock)
-			case "ai-float":
-				a.SetAIMode(app.AIFloat)
-			case "ai-rail":
-				a.SetAIMode(app.AIRail)
 			}
 		}
 		// LIGHTCODE_CAPTURE makes the app save a PNG of the window and
@@ -121,7 +112,6 @@ func newMenu(a *app.App) *mygo.Menu {
 		{Label: "拆分 / 关闭编辑器", Accelerator: "CmdOrCtrl+\\", Click: run("view.split")},
 		{Label: "终端", Accelerator: "CmdOrCtrl+`", Click: run("terminal.toggle")},
 		{Label: "设置", Click: run("view.settings")},
-		{Label: "切换 AI 面板", Click: run("view.toggleAI")},
 		mygo.Separator(),
 		{Label: "放大", Accelerator: "CmdOrCtrl+=", Click: run("view.zoomIn")},
 		{Label: "缩小", Accelerator: "CmdOrCtrl+-", Click: run("view.zoomOut")},

@@ -188,7 +188,7 @@ func editorView(c *ui.Context, e *document.Editor) {
 func (a *App) emptyColumn(c *ui.Context, col *document.Column) {
 	ui.Column(c).Grow(1).Center().Gap(6).PaddingX(10).Children(func() {
 		ui.Text(c, "轻码 IDE").FontSize(18).Bold().TextColor(theme.Text)
-		ui.Text(c, "Go 写成的轻量编辑器 · AI 只产出 diff").FontSize(11).TextColor(theme.Muted)
+		ui.Text(c, "Go 写成的轻量编辑器").FontSize(11).TextColor(theme.Muted)
 		ui.Box(c).Height(12)
 		mod := "Ctrl"
 		if isMac() {

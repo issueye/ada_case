@@ -41,8 +41,6 @@ func (a *App) statusBar(c *ui.Context) {
 		} else {
 			statusSegmentText(c, "无打开文件", nil)
 		}
-		aiSeg := statusSegment(c, icons.Sparkles, "AI")
-		aiSeg.OnClick(a.ToggleAI)
 	})
 }
 

@@ -49,7 +49,7 @@ func TestViewChrome(t *testing.T) {
 	if !tt.HasText("资源管理器") {
 		t.Fatalf("no explorer title; texts: %q", tt.Texts())
 	}
-	for _, want := range []string{"轻码", "AI 助手", "README.md", "main.go"} {
+	for _, want := range []string{"轻码", "README.md", "main.go"} {
 		if !tt.HasText(want) {
 			t.Errorf("missing %q; texts: %q", want, tt.Texts())
 		}
@@ -70,7 +70,7 @@ func TestQuickOpenOpensFile(t *testing.T) {
 	}
 }
 
-func TestToggleSidebarAndAI(t *testing.T) {
+func TestToggleSidebar(t *testing.T) {
 	a, _ := testWorkspace(t)
 	tt := ui.NewTester(a.View, 1280, 820)
 	tt.Key(ui.Cmd, ui.KeyB)
@@ -80,15 +80,6 @@ func TestToggleSidebarAndAI(t *testing.T) {
 	tt.Key(ui.Cmd, ui.KeyB)
 	if !tt.HasText("资源管理器") {
 		t.Errorf("sidebar did not come back")
-	}
-	tt.Key(ui.Cmd|ui.Shift, ui.KeyP)
-	tt.Type("AI")
-	tt.Key(0, ui.KeyEnter)
-	if a.AI.Mode != AIRail {
-		t.Errorf("AI panel did not collapse")
-	}
-	if !tt.HasText("AI") {
-		t.Errorf("the AI rail is missing")
 	}
 }
 

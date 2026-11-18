@@ -34,12 +34,6 @@ func (a *App) View(c *ui.Context) {
 					a.editorArea(c)
 				}
 			})
-			switch a.AI.Mode {
-			case AIDock:
-				if a.Prefs.AIEnabled {
-					a.aiMountDock(c)
-				}
-			}
 		})
 		a.statusBar(c)
 	})
@@ -47,11 +41,6 @@ func (a *App) View(c *ui.Context) {
 	a.closeConfirmOverlay(c)
 	a.fileOpOverlay(c)
 	a.discardOverlay(c)
-	if a.Prefs.AIEnabled {
-		a.aiMountFloat(c)
-		a.aiMountRail(c)
-	}
-	a.aiSettingsOverlay(c)
 }
 
 // bindWindowKeys binds the commands' keys for the whole window: the
@@ -90,7 +79,7 @@ func (a *App) editorArea(c *ui.Context) {
 }
 
 // columnView shows one column: its tabs, breadcrumbs, editor or empty
-// page, and the assistant's rail when it is collapsed.
+// page.
 func (a *App) columnView(c *ui.Context, idx int) {
 	col := a.Cols[idx]
 	ui.Column(c).Grow(1).Background(theme.Background).Children(func() {

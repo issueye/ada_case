@@ -24,8 +24,6 @@ const (
 	PanelHeadH = 34
 	RowH       = 24
 	SectionH   = 28
-	AIDockW    = 380
-	AIRailW    = 62
 	TerminalH  = 200
 	WindowMinW = 960
 	WindowMinH = 600
@@ -54,8 +52,6 @@ var (
 	Faint       ui.Color
 	Accent      ui.Color
 	AccentSoft  ui.Color
-	AI          ui.Color
-	AISoft      ui.Color
 	Hover       ui.Color
 	Active      ui.Color
 	Danger      ui.Color
@@ -76,7 +72,7 @@ var (
 type palette struct {
 	Background, Panel, PanelDeep, Border, BorderSoft   ui.Color
 	Text, Muted, Faint                                 ui.Color
-	Accent, AccentSoft, AI, AISoft, Hover, Active      ui.Color
+	Accent, AccentSoft, Hover, Active                  ui.Color
 	Danger, Warning, Success, Added, Deleted, Modified ui.Color
 	WarningSoft, WarningLine, Scrollbar                ui.Color
 }
@@ -86,7 +82,6 @@ var darkPalette = palette{
 	Border: ui.Hex("#242a33"), BorderSoft: ui.Hex("#1c222a"),
 	Text: ui.Hex("#e6e9ef"), Muted: ui.Hex("#8b95a5"), Faint: ui.Hex("#5d6675"),
 	Accent: ui.Hex("#5b9cff"), AccentSoft: ui.Hex("#1e2b3d"),
-	AI: ui.Hex("#a78bfa"), AISoft: ui.Hex("#2a2340"),
 	Hover: ui.Hex("#1a2028"), Active: ui.Hex("#1f2630"),
 	Danger: ui.Hex("#f87171"), Warning: ui.Hex("#fbbf24"), Success: ui.Hex("#4ade80"),
 	Added: ui.Hex("#3fb950"), Deleted: ui.Hex("#f85149"), Modified: ui.Hex("#d29922"),
@@ -99,7 +94,6 @@ var lightPalette = palette{
 	Border: ui.Hex("#d8dee8"), BorderSoft: ui.Hex("#e6eaf0"),
 	Text: ui.Hex("#1f2430"), Muted: ui.Hex("#5b6472"), Faint: ui.Hex("#8a93a2"),
 	Accent: ui.Hex("#3b82f6"), AccentSoft: ui.Hex("#e3edff"),
-	AI: ui.Hex("#7c5cff"), AISoft: ui.Hex("#ece7ff"),
 	Hover: ui.Hex("#eef1f6"), Active: ui.Hex("#e1e7f2"),
 	Danger: ui.Hex("#d1242f"), Warning: ui.Hex("#9a6700"), Success: ui.Hex("#1a7f37"),
 	Added: ui.Hex("#1a7f37"), Deleted: ui.Hex("#cf222e"), Modified: ui.Hex("#9a6700"),
@@ -120,7 +114,6 @@ func Use(isLight bool) {
 	Border, BorderSoft = p.Border, p.BorderSoft
 	Text, Muted, Faint = p.Text, p.Muted, p.Faint
 	Accent, AccentSoft = p.Accent, p.AccentSoft
-	AI, AISoft = p.AI, p.AISoft
 	Hover, Active = p.Hover, p.Active
 	Danger, Warning, Success = p.Danger, p.Warning, p.Success
 	Added, Deleted, Modified = p.Added, p.Deleted, p.Modified

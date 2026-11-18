@@ -1,7 +1,7 @@
 // Package settings keeps the app's state between runs: the files open,
-// the tab chosen, the sidebar and the AI panel, and the zoom. It writes
-// one JSON document, replaced atomically, and reads it back without
-// failing on a missing, half-written or older file.
+// the tab chosen, the sidebar and the zoom. It writes one JSON document,
+// replaced atomically, and reads it back without failing on a missing,
+// half-written or older file.
 package settings
 
 import (
@@ -33,12 +33,6 @@ type State struct {
 	// SidebarOpen and SidebarView are the sidebar's state.
 	SidebarOpen bool `json:"sidebarOpen"`
 	SidebarView int  `json:"sidebarView"`
-	// AIMode is how the assistant shows: 0 docked, 1 floating, 2 the rail.
-	AIMode int `json:"aiMode,omitempty"`
-	// AIBaseURL and AIModel configure the assistant; the key lives in the
-	// system's secret store, not in this file.
-	AIBaseURL string `json:"aiBaseURL,omitempty"`
-	AIModel   string `json:"aiModel,omitempty"`
 	// Zoom is the window content's zoom, 1 for none.
 	Zoom float32 `json:"zoom,omitempty"`
 }
