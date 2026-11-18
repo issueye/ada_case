@@ -107,6 +107,14 @@ func (a *App) columnView(c *ui.Context, idx int) {
 				if e.Doc.ExternalChanged() {
 					a.externalBanner(c, e.Doc)
 				}
+				if e.Doc.IsViewer() {
+					a.viewerView(c, e.Doc)
+					return
+				}
+				if e.MarkdownPreview && e.Doc.Language() == "Markdown" {
+					a.markdownView(c, e.Doc)
+					return
+				}
 				e.State.OnInput = a.RunKey
 				editorView(c, e)
 			} else {

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -17,6 +18,37 @@ var ErrBinary = errors.New("binary file")
 
 // ErrEncoding is returned for text this app cannot decode.
 var ErrEncoding = errors.New("unreadable text encoding")
+
+// ErrViewerReadOnly is returned when something tries to save a document
+// that is only shown, as a picture is.
+var ErrViewerReadOnly = errors.New("预览文件是只读的")
+
+// Kind is what a document shows: text in the editor, or bytes as a picture.
+type Kind int
+
+// The kinds of document.
+const (
+	// KindText is a file the editor reads and writes.
+	KindText Kind = iota
+	// KindImage is a raster picture: PNG, JPEG, GIF, WebP or BMP.
+	KindImage
+	// KindSVG is a vector picture.
+	KindSVG
+)
+
+// ViewerKind tells from a file's name whether it is shown as a picture.
+func ViewerKind(path string) Kind {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp":
+		return KindImage
+	case ".svg":
+		return KindSVG
+	}
+	return KindText
+}
+
+// IsViewer reports whether path is shown as a picture rather than edited.
+func IsViewer(path string) bool { return ViewerKind(path) != KindText }
 
 // Encodings the app reads and writes.
 const (
@@ -36,6 +68,8 @@ type Document struct {
 	// changes against.
 	Base *editor.Buffer
 
+	kind     Kind
+	data     []byte
 	encoding string
 	modTime  time.Time
 	size     int64
@@ -68,6 +102,52 @@ func Open(path string) (*Document, error) {
 	d.set(text)
 	return d, nil
 }
+
+// OpenViewer reads path as a picture: its bytes are kept for the viewer, and
+// the document has empty text buffers so a tab can hold it like any other.
+func OpenViewer(path string) (*Document, error) {
+	kind := ViewerKind(path)
+	if kind == KindText {
+		return Open(path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	d := &Document{
+		Path:     path,
+		kind:     kind,
+		data:     data,
+		encoding: "—",
+		modTime:  info.ModTime(),
+		size:     info.Size(),
+		readOnly: true,
+	}
+	d.set("")
+	return d, nil
+}
+
+// OpenAny opens path as whatever it is: text for the editor, bytes for a
+// picture.
+func OpenAny(path string) (*Document, error) {
+	if IsViewer(path) {
+		return OpenViewer(path)
+	}
+	return Open(path)
+}
+
+// Kind is what the document shows.
+func (d *Document) Kind() Kind { return d.kind }
+
+// Data is the picture's bytes, an empty slice for a text document.
+func (d *Document) Data() []byte { return d.data }
+
+// IsViewer reports whether this document is shown as a picture.
+func (d *Document) IsViewer() bool { return d.kind != KindText }
 
 // decode reads text in UTF-8 with or without a BOM, or in GBK. It rejects
 // binary files and encodings it cannot prove, rather than showing
@@ -125,16 +205,28 @@ func (d *Document) ReadOnly() bool { return d.readOnly }
 // Encoding is the file's encoding, as "UTF-8", "UTF-8 BOM" or "GBK".
 func (d *Document) Encoding() string { return d.encoding }
 
-// Language is the name of the editor's language, as "Go".
+// Language is the name of the editor's language, as "Go", or the picture
+// kind a viewer shows.
 func (d *Document) Language() string {
+	if d.IsViewer() {
+		switch d.kind {
+		case KindSVG:
+			return "SVG"
+		case KindImage:
+			return strings.ToUpper(strings.TrimPrefix(strings.ToLower(filepath.Ext(d.Path)), "."))
+		}
+	}
 	if l := d.Buffer.Language(); l != nil {
 		return l.Name
 	}
 	return "Plain Text"
 }
 
-// LineEnding is "LF" or "CRLF".
+// LineEnding is "LF" or "CRLF", "—" for a picture.
 func (d *Document) LineEnding() string {
+	if d.IsViewer() {
+		return "—"
+	}
 	if d.Buffer.LineEnding() == "\r\n" {
 		return "CRLF"
 	}
@@ -144,6 +236,9 @@ func (d *Document) LineEnding() string {
 // Save writes the buffer to disk and marks it saved, in the encoding the
 // file was read in.
 func (d *Document) Save() error {
+	if d.IsViewer() {
+		return ErrViewerReadOnly
+	}
 	var buf bytes.Buffer
 	if _, err := d.Buffer.WriteTo(&buf); err != nil {
 		return err
@@ -203,6 +298,12 @@ func (d *Document) Reload() error {
 	info, err := os.Stat(d.Path)
 	if err != nil {
 		return err
+	}
+	if d.IsViewer() {
+		d.data = data
+		d.modTime, d.size = info.ModTime(), info.Size()
+		d.external = false
+		return nil
 	}
 	text, enc, err := decode(data)
 	if err != nil {

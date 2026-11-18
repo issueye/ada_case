@@ -57,6 +57,8 @@ type App struct {
 	AI aiState
 	// AIEdge is the assistant's mounted panel: its session and frames.
 	AIEdge aiEdge
+	// viewers caches the decoded picture of each preview document.
+	viewers map[*document.Document]ui.ImageSource
 
 	PaletteOpen  bool
 	PaletteMode  PaletteMode
@@ -211,6 +213,7 @@ func (a *App) registerCommands() {
 	add("terminal.toggle", "终端", "视图", "CmdOrCtrl+`", a.toggleTerminal)
 	add("view.settings", "设置", "文件", "", func() { a.SettingsOpen = true })
 	add("view.toggleTheme", "切换明暗主题", "视图", "CmdOrCtrl+Shift+T", a.ToggleTheme)
+	add("view.markdownPreview", "Markdown 预览 / 源码", "视图", "", a.ToggleMarkdownPreview)
 	add("palette.files", "快速打开…", "转到", "CmdOrCtrl+P", func() { a.OpenPalette(PaletteFiles) })
 	add("palette.commands", "命令面板…", "视图", "CmdOrCtrl+Shift+P", func() { a.OpenPalette(PaletteCommands) })
 	add("git.refresh", "刷新源代码管理", "Git", "", a.refreshGit)
@@ -371,7 +374,7 @@ func (a *App) Doc(path string) (*document.Document, error) {
 		}
 		return d, nil
 	}
-	d, err := document.Open(abs)
+	d, err := document.OpenAny(abs)
 	if err != nil {
 		return nil, err
 	}

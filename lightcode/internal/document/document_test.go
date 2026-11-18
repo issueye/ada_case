@@ -173,3 +173,63 @@ func TestChangedOnDisk(t *testing.T) {
 		t.Errorf("a newer mtime went unnoticed")
 	}
 }
+
+func TestViewerKinds(t *testing.T) {
+	for path, want := range map[string]Kind{
+		"a.png": KindImage, "b.JPG": KindImage, "c.webp": KindImage, "d.bmp": KindImage, "e.svg": KindSVG, "f.go": KindText, "g.md": KindText,
+	} {
+		if got := ViewerKind(path); got != want {
+			t.Errorf("ViewerKind(%q) = %v, want %v", path, got, want)
+		}
+	}
+}
+
+func TestOpenViewerKeepsBytes(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pic.png")
+	data := []byte{0x89, 'P', 'N', 'G', 0, 0, 0}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := OpenAny(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Kind() != KindImage || !d.IsViewer() {
+		t.Fatalf("kind = %v", d.Kind())
+	}
+	if string(d.Data()) != string(data) {
+		t.Errorf("bytes = %v", d.Data())
+	}
+	if d.Dirty() || !d.ReadOnly() {
+		t.Errorf("viewer dirty=%v readOnly=%v", d.Dirty(), d.ReadOnly())
+	}
+	if err := d.Save(); err != ErrViewerReadOnly {
+		t.Errorf("Save = %v, want ErrViewerReadOnly", err)
+	}
+	if d.Language() != "PNG" || d.LineEnding() != "—" {
+		t.Errorf("language=%q lineEnding=%q", d.Language(), d.LineEnding())
+	}
+}
+
+func TestViewerReload(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pic.svg")
+	if err := os.WriteFile(path, []byte("<svg/>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := OpenAny(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.Kind() != KindSVG || d.Language() != "SVG" {
+		t.Fatalf("kind=%v language=%q", d.Kind(), d.Language())
+	}
+	if err := os.WriteFile(path, []byte("<svg><rect/></svg>"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := d.Reload(); err != nil {
+		t.Fatal(err)
+	}
+	if string(d.Data()) != "<svg><rect/></svg>" {
+		t.Errorf("bytes after reload = %q", d.Data())
+	}
+}

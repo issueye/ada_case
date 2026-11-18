@@ -65,6 +65,10 @@ func main() {
 				a.SetAIMode(app.AIFloat)
 			case "ai-rail":
 				a.SetAIMode(app.AIRail)
+			case "markdown":
+				if e := a.Col().Current(); e != nil {
+					e.MarkdownPreview = true
+				}
 			}
 		}
 		// LIGHTCODE_CAPTURE makes the app save a PNG of the window and

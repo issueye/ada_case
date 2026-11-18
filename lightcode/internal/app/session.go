@@ -146,6 +146,7 @@ func (a *App) checkDisk() bool {
 			continue
 		}
 		if err := d.Reload(); err == nil {
+			a.forgetViewer(d)
 			a.say("已从磁盘重新加载 " + d.Name())
 		}
 	}

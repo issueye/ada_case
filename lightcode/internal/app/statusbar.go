@@ -32,12 +32,17 @@ func (a *App) statusBar(c *ui.Context) {
 		}
 		ui.Box(c).Grow(1)
 		if e != nil {
-			pos := e.State.CursorPos()
-			statusSegmentText(c, fmt.Sprintf("行 %d，列 %d", pos.Line+1, pos.Col+1), nil)
-			statusSegmentText(c, "空格: 4", nil)
-			statusSegmentText(c, e.Doc.Encoding(), nil)
-			statusSegmentText(c, e.Doc.LineEnding(), nil)
-			statusSegmentText(c, e.Doc.Language(), nil)
+			if e.Doc.IsViewer() {
+				statusSegmentText(c, "只读预览", nil)
+				statusSegmentText(c, e.Doc.Language(), nil)
+			} else {
+				pos := e.State.CursorPos()
+				statusSegmentText(c, fmt.Sprintf("行 %d，列 %d", pos.Line+1, pos.Col+1), nil)
+				statusSegmentText(c, "空格: 4", nil)
+				statusSegmentText(c, e.Doc.Encoding(), nil)
+				statusSegmentText(c, e.Doc.LineEnding(), nil)
+				statusSegmentText(c, e.Doc.Language(), nil)
+			}
 		} else {
 			statusSegmentText(c, "无打开文件", nil)
 		}

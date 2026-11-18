@@ -300,7 +300,7 @@ func (a *App) aiContextMessages() []protocol.ChatMessage {
 			"改动由用户在界面上确认后应用。其余问题用简洁的中文回答。",
 	}}
 	e := a.Col().Current()
-	if e == nil {
+	if e == nil || e.Doc.IsViewer() {
 		return out
 	}
 	text := e.Doc.Buffer.String()

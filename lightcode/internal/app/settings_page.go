@@ -168,10 +168,10 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 					}
 				})
 				a.capabilityRow(c, "搜索", "Go 内置实现（有 ripgrep 时优先）", true)
-				a.capabilityRow(c, "预览器", "ui/markdown", true)
+				a.capabilityRow(c, "预览器", "图片 / SVG / Markdown", true)
 				ui.Box(c).Height(6)
 				ui.Text(c, "内置扩展（构建期）").FontSize(10).Bold().TextColor(theme.Muted)
-				for _, p := range []string{"ui/editor · 编辑器", "editor.DiffView · 差异", "ui/markdown · Markdown 预览", "plugins/terminal · 终端"} {
+				for _, p := range []string{"ui/editor · 编辑器", "editor.DiffView · 差异", "ui.Image · 图片与 SVG 预览", "ui/markdown · Markdown 预览", "plugins/terminal · 终端"} {
 					ui.Text(c, p).FontSize(10).TextColor(theme.Faint)
 				}
 			})

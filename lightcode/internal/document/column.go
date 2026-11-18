@@ -15,6 +15,9 @@ type Editor struct {
 	// is replaced by the next preview, and pinned by an edit or a
 	// deliberate open.
 	Preview bool
+	// MarkdownPreview shows a Markdown document rendered instead of its
+	// source; the buffer is still the document of record.
+	MarkdownPreview bool
 	// previewVersion is the buffer version the preview opened at.
 	previewVersion uint64
 }

@@ -155,6 +155,8 @@ func (a *App) breadcrumbs(c *ui.Context, col *document.Column) {
 			}
 			ui.Text(c, part).FontSize(11).TextColor(color).SingleLine()
 		}
+		ui.Box(c).Grow(1)
+		a.previewControls(c, col)
 	})
 }
 

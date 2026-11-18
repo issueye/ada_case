@@ -27,7 +27,13 @@ func relPath(root, path string) (string, error) {
 }
 
 // fileIcon is the icon of a file, by its extension.
-func fileIcon(name string) *ui.SVG { return icons.File }
+func fileIcon(name string) *ui.SVG {
+	switch ext(name) {
+	case "png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "svg":
+		return icons.Image
+	}
+	return icons.File
+}
 
 func ext(name string) string {
 	e := strings.ToLower(filepath.Ext(name))
