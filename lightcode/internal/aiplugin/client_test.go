@@ -122,6 +122,9 @@ func TestStreamThroughProcess(t *testing.T) {
 	if !st.Running || st.PID == 0 {
 		t.Fatalf("status = %+v", st)
 	}
+	if st.PID == os.Getpid() {
+		t.Fatalf("the answer was read in the host process (pid %d): the plugin must be its own process", st.PID)
+	}
 	if st.Name != aiplugin.Name || st.Version != aiplugin.Version {
 		t.Errorf("welcome named %q %q", st.Name, st.Version)
 	}
