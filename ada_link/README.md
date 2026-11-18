@@ -1,6 +1,6 @@
 # ada_link
 
-> **已并入 [ada_case](../lightcode/README.md) 仓库**（本目录 `ada_link/`）：源码随编辑器与 AI 插件一起构建，`bin/` 与 `artifacts/` 未随迁。为进程插件做了两处小改动——`link.Peer` 接受 `io.ReadWriteCloser`、新增 `link.PipeConn` 与 `link.NewQuietPeer`/`Start`；其余能力（socket 会话、帧环、多面板、安装器）保持原样。
+> **已并入 [ada_case](../lightcode/README.md) 仓库**（本目录 `ada_link/`）：源码随编辑器与 AI 插件一起构建，`bin/` 与 `artifacts/` 未随迁。为进程插件做了几处小改动——`link.Peer` 接受 `io.ReadWriteCloser`、新增 `link.PipeConn`、`link.NewQuietPeer`/`Start`、`mygoembed.Host.SetRadius`（按卡片圆角裁剪帧）、`Host.View` 不再 AutoFocus；其余能力（socket 会话、帧环、多面板、安装器）保持原样。
 
 **把另一个 MyGo 应用的 native UI，嵌进你的 MyGo 窗口——进程隔离，像素中继，类型化 IPC。**
 

@@ -119,8 +119,20 @@ func (a *App) aiMount(c *ui.Context) {
 	if e.dirty {
 		a.pushAIConfig()
 	}
+	// The dock is flush with the layout; the floating and rail cards are
+	// rounded, and the frame takes their corners.
+	h.SetRadius(a.aiMountRadius())
 	ui.Box(c).Grow(1).Draw(func(_ *ui.Painter, r ui.Rect) { a.AIEdge.rect = r }).
 		Children(func() { h.View(c) })
+}
+
+// aiMountRadius rounds the frame of a floating or rail mount; the dock has
+// no card of its own.
+func (a *App) aiMountRadius() float32 {
+	if a.AI.Mode == AIDock {
+		return 0
+	}
+	return 9
 }
 
 // aiMountError shows why the panel is missing, and the way back: the plugin

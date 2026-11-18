@@ -49,6 +49,10 @@ type Host struct {
 	// asked is the DIPs and scale the child was last asked for.
 	askedW, askedH int
 	askedScale     float32
+	// radius rounds the frame the host draws; 0 draws the pixels as they
+	// come. A panel mounted as a card sets it so its square frame takes the
+	// card's corners.
+	radius float32
 
 	onReady func()
 }
@@ -68,6 +72,10 @@ func Attach(win *mygo.Window, sess *link.Session) *Host {
 	win.OnResize(func() { win.Invalidate() })
 	return h
 }
+
+// SetRadius rounds the frame the host draws, so a square surface takes the
+// rounded corners of the card around it. Zero draws the pixels untouched.
+func (h *Host) SetRadius(radius float32) { h.radius = radius }
 
 // Session returns the session the host shows.
 func (h *Host) Session() *link.Session { return h.sess }
@@ -159,6 +167,13 @@ func (h *Host) View(c *ui.Context) {
 				// rather than stretch a frame of another size across the
 				// element, as a resize does before the child's next frame.
 				fit = ui.Contain
+			}
+			if h.radius > 0 {
+				// Inset by the border so the card's ring stays visible
+				// around the frame.
+				rr := ui.Rect{X: r.X + 1, Y: r.Y + 1, W: r.W - 2, H: r.H - 2}
+				p.Clip(rr, h.radius, func() { p.Image(h.bmp, rr, fit) })
+				return
 			}
 			p.Image(h.bmp, r, fit)
 		})
