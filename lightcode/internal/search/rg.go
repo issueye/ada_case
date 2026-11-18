@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"lightcode/internal/proc"
 	"lightcode/internal/workspace"
 )
 
@@ -59,6 +60,7 @@ func runRipgrep(ctx context.Context, root, query string, opts Options, onMatch f
 	}
 	args = append(args, "-e", query, ".")
 	cmd := exec.CommandContext(ctx, rg, args...)
+	proc.Hide(cmd)
 	cmd.Dir = root
 	out, err := cmd.StdoutPipe()
 	if err != nil {

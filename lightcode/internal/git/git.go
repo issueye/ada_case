@@ -15,6 +15,8 @@ import (
 	"strings"
 
 	"github.com/egoist/mygo/ui/editor"
+
+	"lightcode/internal/proc"
 )
 
 // ErrNotRepo is returned by Open for a folder outside a repository.
@@ -42,6 +44,7 @@ func Open(dir string) (*Repo, error) {
 // run runs git in dir and returns its output.
 func run(dir string, args ...string) (string, error) {
 	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+	proc.Hide(cmd)
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
 	out, err := cmd.Output()
@@ -58,6 +61,7 @@ func run(dir string, args ...string) (string, error) {
 // Run runs git in the repository, with ctx.
 func (r *Repo) Run(ctx context.Context, args ...string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", r.Root}, args...)...)
+	proc.Hide(cmd)
 	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=true")
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
@@ -243,6 +247,7 @@ func (r *Repo) FileMode(ctx context.Context, path string) string {
 // HashObject writes text into the object database and returns its id.
 func (r *Repo) HashObject(ctx context.Context, text string) (string, error) {
 	cmd := exec.CommandContext(ctx, "git", "-C", r.Root, "hash-object", "-w", "--stdin")
+	proc.Hide(cmd)
 	cmd.Stdin = strings.NewReader(text)
 	var stderr strings.Builder
 	cmd.Stderr = &stderr
