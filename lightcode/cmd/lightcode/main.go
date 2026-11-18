@@ -59,6 +59,12 @@ func main() {
 				a.ToggleTheme()
 			case "capabilities":
 				a.ShowSidebar(4)
+			case "ai":
+				a.SetAIMode(app.AIDock)
+			case "ai-float":
+				a.SetAIMode(app.AIFloat)
+			case "ai-rail":
+				a.SetAIMode(app.AIRail)
 			}
 		}
 		// LIGHTCODE_CAPTURE makes the app save a PNG of the window and

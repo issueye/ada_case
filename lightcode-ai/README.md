@@ -1,12 +1,16 @@
 # lightcode-ai
 
-轻码 IDE 的 AI 客户端，**独立项目**：自己的 `go.mod`、自己的二进制、自己的测试。
-它不 import 编辑器的任何包；编辑器只 import 它的 `protocol` 契约包。
+轻码 IDE 的 AI 面板，**独立项目**：自己的 `go.mod`、自己的二进制、自己的测试，
+**连界面也在这里**。它用 MyGo 的 `ui` 画面板，`ada_link` 把帧送进编辑器窗口的
+挂载点；它不 import 编辑器的任何包，编辑器只拿它的 `protocol` 契约。
 
 ```
-protocol/   线上类型与常量（hello/welcome、ai.stream、ai.cancel、delta）
+assistant/  面板自己的 UI：标题头、对话、输入、diff 卡片、拖动
+protocol/   契约：configure/context/answer/apply/setMode/settings 与事件
 provider/   OpenAI 兼容的 SSE 客户端
-serve/      管道上的握手与方法实现
+theme/      面板的深/浅色板（与编辑器同一套 token，各自一份）
+icons/      面板用到的 SVG
+main.go     mygoembed.Serve(assistant.View)
 ```
 
 ## 构建
@@ -21,22 +25,25 @@ go build -o lightcode-ai .                    # 只构建，放到任意目录
 
 ## 协议
 
-消息层来自并入本仓库的 `ada_link/link`：4 字节小端长度 + JSON，
-`hello` / `welcome` / `call` / `reply` / `event` / `bye`。载荷：
+帧与输入走 `ada_link`（`mygoembed` 的 `Serve`/`Attach`，帧环 + 指针/键盘转发），
+调用与事件走 `ada_link/link` 的消息层。`protocol` 只命名载荷：
 
-| 方法/事件 | 载荷 |
-|---|---|
-| `ai.stream` | `StreamRequest{requestID, config, messages}` → `StreamResult{requestID, text}` |
-| `delta` 事件 | `Delta{requestID, text}` |
-| `ai.cancel` | `CancelRequest{requestID}` |
+| 方法/事件 | 方向 | 载荷 |
+|---|---|---|
+| `ai.configure` | 编辑器 → 面板 | `Configure{baseURL, model, apiKey, light, mode, x, y}` |
+| `editor.context` | 面板 → 编辑器 | `Context{messages}`（系统提示 + 当前文件/选区） |
+| `editor.answer` | 面板 → 编辑器 | `AnswerRequest{requestID, text}` → `AnswerResult{cards}` |
+| `editor.apply` | 面板 → 编辑器 | `ApplyRequest{requestID, index}` → `ApplyResult{err}` |
+| `editor.setMode` / `ai.settings` | 面板 → 编辑器 | 换挂载点 / 打开端点与 Key 弹窗 |
+| `ai.move` / `ai.origin` | 双向事件 | 拖动与挂载点位置 |
 
-编辑器发 `hello`（带协议版本），本进程回 `welcome{name, version, methods}`；
-版本不符即拒绝。全部说明与取舍见 [`../docs/ai-plugin.md`](../docs/ai-plugin.md)。
+对话、输入、打字机、diff 卡片都在本进程；编辑器只做文件与凭据。全部说明与取舍见
+[`../docs/ai-plugin.md`](../docs/ai-plugin.md)。
 
 ## 依赖
 
-只有两样：标准库 + `ada_link/link`。不依赖 MyGo、不依赖编辑器、不依赖编辑器的
-凭据库或工作区。请求里带 `config`（BaseURL、模型、Key），Key 只在内存里。
+标准库 + MyGo（`ui`、`ui/editor`、`ui/markdown`，画自己的界面）+ `ada_link`。
+不依赖编辑器、不依赖它的凭据库或工作区；Key 随 `ai.configure` 进来，只在内存里。
 
 代理：HTTP 客户端用默认 transport，认 `HTTP(S)_PROXY` 环境变量；不再读桌面系统的
 代理设置——那需要重新引入 UI 框架，与这里的独立性相悖。
@@ -48,7 +55,7 @@ go test ./...
 ```
 
 - `provider`：SSE 分片、请求体、HTTP 错误、取消；
-- `serve`：内存管道上的握手、流式增量与整段一致、取消、空 Key。
+- `assistant`：两种形态的界面、流式回答 + 卡片 + 应用、拖动换算、按钮走桥、缺 Key。
 
-真进程的端到端由编辑器的 `internal/aiplugin` 测试覆盖（它 spawn 一个测试进程扮演
-插件，协议与本项目一致）。
+帧中继与输入转发的真进程端到端由 `ada_link` 的 `mygoembed` 测试与手工截图覆盖
+（`_shots/lightcode-ai-panel.png` 等三张）。

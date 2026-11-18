@@ -37,7 +37,7 @@ func (a *App) View(c *ui.Context) {
 			switch a.AI.Mode {
 			case AIDock:
 				if a.Prefs.AIEnabled {
-					a.aiPanel(c)
+					a.aiMountDock(c)
 				}
 			}
 		})
@@ -47,12 +47,9 @@ func (a *App) View(c *ui.Context) {
 	a.closeConfirmOverlay(c)
 	a.fileOpOverlay(c)
 	a.discardOverlay(c)
-	a.aiFloat(c)
-	if a.Prefs.AIEnabled && a.AI.Mode == AIRail {
-		a.aiRail(c)
-	}
-	if a.Prefs.AIEnabled && a.AI.Mode == AIRail && a.AI.RailHover {
-		a.aiRailPeek(c)
+	if a.Prefs.AIEnabled {
+		a.aiMountFloat(c)
+		a.aiMountRail(c)
 	}
 	a.aiSettingsOverlay(c)
 }

@@ -7,7 +7,7 @@
 
 ```
 lightcode/     编辑器：窗口、侧栏、编辑、Git、终端、AI 面板
-lightcode-ai/  AI 客户端：独立项目、独立二进制（protocol / provider / serve）
+lightcode-ai/  AI 面板：独立项目、独立二进制，界面也在里面（assistant / protocol / provider）
 ada_link/      进程间库（并入）：link 的消息层被编辑器与插件共用
 docs/          设计与计划（dev-plan、mygo-ide-eval、ai-plugin …）
 ```
@@ -43,8 +43,8 @@ Go 1.27+，Windows 10 1809+ / macOS 13+ / Linux（GTK 3）。
 ## 测试
 
 ```powershell
-cd lightcode     ; go test ./...   # 编辑器：108 个
-cd ..\lightcode-ai; go test ./...   # 插件：9 个
+cd lightcode     ; go test ./...   # 编辑器：90 个
+cd ..\lightcode-ai; go test ./...   # 插件：11 个
 cd ..\ada_link  ; go test ./...     # 并入库：link / mygoembed / panels
 ```
 

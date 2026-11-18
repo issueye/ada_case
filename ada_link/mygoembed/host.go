@@ -138,10 +138,12 @@ func (h *Host) View(c *ui.Context) {
 		})
 		return
 	}
+	// Focusable, but not AutoFocus: the panel shares the window with the
+	// editor, and taking the keyboard when it mounts would leave the editor
+	// unable to type until it is clicked. A click focuses it.
 	ui.Box(c).Fill().
 		Key(h).
 		Focusable().
-		AutoFocus().
 		HandleInput(h.input).
 		Draw(func(p *ui.Painter, r ui.Rect) {
 			h.rect = r

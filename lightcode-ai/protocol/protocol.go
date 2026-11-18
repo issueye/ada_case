@@ -1,74 +1,58 @@
-// Package protocol is the contract between the editor and this plugin:
-// the messages that cross the pipe, and nothing about how either side
-// draws its screen.
+// Package protocol is the contract between the editor and the assistant
+// panel: what the editor pushes into the panel, and what the panel asks the
+// editor to do. The panel draws its own UI, so the messages are about
+// configuration and file work, not pixels — the pixels travel through
+// ada_link's frame ring.
 //
-// The envelope is link.Message — call, reply, event and the hello/welcome
-// handshake — so both ends share one transport implementation. This
-// package only names what travels inside it.
+// The envelope is link.Message; the handshake, frames and input belong to
+// mygoembed. This package only names what the two ends say to each other.
 package protocol
 
-import "strings"
-
-// Proto is the wire version both ends check in the handshake. The shapes
-// below travel with it; a mismatch is refused rather than guessed.
-const Proto = 1
-
-// Name and Version identify this plugin in its welcome, and in the
-// editor's capabilities view.
+// Name and Version identify the panel in the editor's capabilities view.
+// Bump the version when a message changes meaning.
 const (
 	Name    = "lightcode-ai"
-	Version = "0.2.0"
+	Version = "0.3.0"
 )
 
-// Methods the plugin serves.
+// Methods the editor calls on the panel, and the panel calls on the editor.
 const (
-	// MethodStream asks for one answer: a StreamRequest. The reply is a
-	// StreamResult, and the text arrives meanwhile as EventDelta.
-	MethodStream = "ai.stream"
-	// MethodCancel stops one answer by its request ID.
-	MethodCancel = "ai.cancel"
+	// MethodConfigure (editor → panel) replaces the panel's configuration:
+	// endpoint, model, key, palette and the mount it draws for.
+	MethodConfigure = "ai.configure"
+	// MethodContext (panel → editor) returns the system prompt and the open
+	// file's text for the next question.
+	MethodContext = "editor.context"
+	// MethodAnswer (panel → editor) hands an answer's text to the editor,
+	// which parses its diffs and returns the cards to draw.
+	MethodAnswer = "editor.answer"
+	// MethodApply (panel → editor) writes one card's change into its file.
+	MethodApply = "editor.apply"
+	// MethodSetMode (panel → editor) asks for another mount.
+	MethodSetMode = "editor.setMode"
+	// MethodSettings (panel → editor) opens the editor's endpoint/key
+	// dialog, where the key is stored in the system's credential store.
+	MethodSettings = "ai.settings"
 )
 
-// EventDelta names a piece of an answer, a Delta.
-const EventDelta = "delta"
+// EventMove is the panel telling the editor its header was dragged: the
+// pointer's place in the window, in DIPs.
+const EventMove = "ai.move"
 
-// Welcome is the plugin's answer to the editor's hello: who it is and what
-// it serves.
-type Welcome struct {
-	Name    string   `json:"name"`
-	Version string   `json:"version"`
-	Methods []string `json:"methods,omitempty"`
-}
+// EventOrigin is the editor telling the panel where its mount sits, so a
+// drag can compute the pointer's window position while the mount follows
+// it.
+const EventOrigin = "ai.origin"
 
-// Config is where and how to ask: an OpenAI-compatible endpoint, the
-// model, the key and the sampling knobs. It crosses the pipe with every
-// request, so the plugin keeps the key in memory only.
+// Config is where and how to ask: an OpenAI-compatible endpoint, the model,
+// the key and the sampling knobs. The key crosses the process boundary with
+// the configuration and stays in the panel's memory.
 type Config struct {
-	// BaseURL ends before /chat/completions, as https://api.openai.com/v1.
-	BaseURL string `json:"baseURL,omitempty"`
-	Model   string `json:"model,omitempty"`
-	APIKey  string `json:"apiKey,omitempty"`
-	// Temperature is the sampling temperature, 0 for the API's default.
+	BaseURL     string  `json:"baseURL,omitempty"`
+	Model       string  `json:"model,omitempty"`
+	APIKey      string  `json:"apiKey,omitempty"`
 	Temperature float32 `json:"temperature,omitempty"`
-	// MaxTokens caps the reply, 0 for the API's default.
-	MaxTokens int `json:"maxTokens,omitempty"`
-}
-
-// DefaultConfig is the OpenAI endpoint with a small, cheap model.
-func DefaultConfig() Config {
-	return Config{BaseURL: "https://api.openai.com/v1", Model: "gpt-4o-mini", Temperature: 0.2}
-}
-
-// Normalize fills what the config leaves out.
-func (c Config) Normalize() Config {
-	if c.BaseURL == "" {
-		c.BaseURL = DefaultConfig().BaseURL
-	}
-	c.BaseURL = strings.TrimRight(c.BaseURL, "/")
-	if c.Model == "" {
-		c.Model = DefaultConfig().Model
-	}
-	return c
+	MaxTokens   int     `json:"maxTokens,omitempty"`
 }
 
 // ChatMessage is one turn of a conversation.
@@ -78,29 +62,78 @@ type ChatMessage struct {
 	Content string `json:"content"`
 }
 
-// StreamRequest asks for one answer. RequestID ties its deltas and its
-// cancel together: the editor may run more than one question, and a late
-// piece of an older answer must not land in a newer one.
-type StreamRequest struct {
-	RequestID string        `json:"requestID"`
-	Config    Config        `json:"config"`
-	Messages  []ChatMessage `json:"messages"`
+// Configure is the editor's push of everything the panel needs: where to
+// ask, how to look, and which mount the editor laid out.
+type Configure struct {
+	BaseURL string `json:"baseURL,omitempty"`
+	Model   string `json:"model,omitempty"`
+	APIKey  string `json:"apiKey,omitempty"`
+	// Light picks the light palette, matching the editor's theme.
+	Light bool `json:"light,omitempty"`
+	// Mode is the mount the editor shows: 0 docked, 1 floating, 2 rail.
+	Mode int `json:"mode"`
+	// X and Y are the mount's top left in the window, in DIPs.
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
 }
 
-// Delta is one piece of an answer.
-type Delta struct {
+// ContextRequest asks the editor for the next question's context.
+type ContextRequest struct{}
+
+// Context is the question's context, built by the editor from the open file
+// and its selection.
+type Context struct {
+	Messages []ChatMessage `json:"messages,omitempty"`
+}
+
+// AnswerRequest hands an answer's whole text to the editor.
+type AnswerRequest struct {
 	RequestID string `json:"requestID"`
 	Text      string `json:"text"`
 }
 
-// StreamResult is an answer's whole text, with what arrived before an
-// error.
-type StreamResult struct {
-	RequestID string `json:"requestID"`
-	Text      string `json:"text"`
+// Card is one file's change, with the text the editor's buffer holds now.
+type Card struct {
+	Index int    `json:"index"`
+	Path  string `json:"path"`
+	Old   string `json:"old,omitempty"`
+	New   string `json:"new,omitempty"`
+	Err   string `json:"err,omitempty"`
 }
 
-// CancelRequest stops the answer of RequestID.
-type CancelRequest struct {
+// AnswerResult carries the cards of one answer.
+type AnswerResult struct {
+	Cards []Card `json:"cards,omitempty"`
+}
+
+// ApplyRequest writes one card's change into its file.
+type ApplyRequest struct {
 	RequestID string `json:"requestID"`
+	Index     int    `json:"index"`
+}
+
+// ApplyResult is an apply's outcome: "" when the file changed.
+type ApplyResult struct {
+	Err string `json:"err,omitempty"`
+}
+
+// ModeRequest asks the editor for another mount.
+type ModeRequest struct {
+	Mode int `json:"mode"`
+}
+
+// MoveRequest asks the editor to put a floating mount at x, y: the
+// pointer's place in the window, less where it took hold of the panel.
+type MoveRequest struct {
+	// Target is 1 for the floating panel, 2 the rail card, matching the
+	// mount modes.
+	Target int     `json:"target"`
+	X      float32 `json:"x"`
+	Y      float32 `json:"y"`
+}
+
+// Origin is where the editor put a mount, in the window's DIPs.
+type Origin struct {
+	X float32 `json:"x"`
+	Y float32 `json:"y"`
 }

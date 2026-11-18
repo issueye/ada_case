@@ -56,11 +56,6 @@ func (a *App) applyTheme() {
 	if a.Diff != nil && a.Diff.State != nil {
 		a.Diff.State.Theme = theme.Code(t)
 	}
-	for i := range a.AI.Messages {
-		for _, card := range a.AI.Messages[i].Diff {
-			if card.State != nil {
-				card.State.Theme = theme.Code(t)
-			}
-		}
-	}
+	// The panel draws its own cards, so it gets the palette it should use.
+	a.AIEdge.dirty = true
 }

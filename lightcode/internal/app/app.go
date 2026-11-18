@@ -55,6 +55,8 @@ type App struct {
 	// AI is the assistant: its mode (docked, floating or the rail), its
 	// conversation, its stream and its configuration.
 	AI aiState
+	// AIEdge is the assistant's mounted panel: its session and frames.
+	AIEdge aiEdge
 
 	PaletteOpen  bool
 	PaletteMode  PaletteMode
@@ -96,8 +98,6 @@ type App struct {
 	SettingsOpen bool
 	// viewW and viewH are the window's content size, for dragging overlays.
 	viewW, viewH float32
-	// aiDrag is a pointer drag of the floating assistant.
-	aiDrag aiDragState
 	// tabMenu is the tab menu a right click opened.
 	tabMenu tabMenuState
 	// Prefs are the app's preferences, from settings.json.
