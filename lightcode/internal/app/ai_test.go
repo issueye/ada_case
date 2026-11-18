@@ -10,7 +10,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
-	"lightcode/internal/ai"
+	"lightcode/internal/aiplugin"
 )
 
 // aiServer streams reply as one delta, as an OpenAI-compatible endpoint
@@ -45,7 +45,7 @@ func TestAIStreamsAndAppliesDiff(t *testing.T) {
 	a.OpenFile(filepath.Join(dir, "main.go"))
 	srv := aiServer(t, aiDiffReply)
 	defer srv.Close()
-	a.AI.Config = ai.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"}
+	a.AI.Config = aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"}
 	a.AI.Draft = "加一行注释"
 	a.SendAI()
 	if a.AI.Streaming {
@@ -103,7 +103,7 @@ func TestAIRetryResends(t *testing.T) {
 		w.Write([]byte(`{"error":{"message":"bad key"}}`))
 	}))
 	defer bad.Close()
-	a.AI.Config = ai.Config{BaseURL: bad.URL, Model: "m", APIKey: "k"}
+	a.AI.Config = aiplugin.Config{BaseURL: bad.URL, Model: "m", APIKey: "k"}
 	a.AI.Draft = "问一次"
 	a.SendAI()
 	last := a.AI.Messages[len(a.AI.Messages)-1]

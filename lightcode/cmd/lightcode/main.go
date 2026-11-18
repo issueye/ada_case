@@ -12,11 +12,22 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	"lightcode/assets"
 	"lightcode/internal/app"
 	"lightcode/internal/theme"
+	"lightcode/plugins/aiprovider"
 )
 
 func main() {
+	// The app spawns itself this way: the assistant runs as its own
+	// process, and the standard streams are the channel. It has to come
+	// before the folder argument below reads argv[1].
+	if len(os.Args) > 1 && os.Args[1] == "ai-provider" {
+		if err := aiprovider.Serve(aiprovider.Options{}); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 	var root, file string
 	if len(os.Args) > 1 {
 		root = os.Args[1]
@@ -41,7 +52,11 @@ func main() {
 			Content:           ui.View(a.View),
 		})
 		a.Win.SetTitle(a.WindowTitle())
-		a.Win.OnClosed(a.CloseTerminal)
+		_ = a.Win.SetIcon(assets.Icon)
+		a.Win.OnClosed(func() {
+			a.CloseTerminal()
+			a.CloseAI()
+		})
 		a.SyncNativeTheme()
 		a.Start()
 		if demo := os.Getenv("LIGHTCODE_DEMO"); demo != "" {

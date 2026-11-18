@@ -6,7 +6,7 @@ import (
 
 	"github.com/egoist/mygo/ui"
 
-	"lightcode/internal/ai"
+	"lightcode/internal/aiplugin"
 )
 
 // TestM4Screenshots renders the assistant with a streamed answer and its
@@ -17,7 +17,7 @@ func TestM4Screenshots(t *testing.T) {
 	a.OpenFile(filepath.Join(dir, "main.go"))
 	srv := aiServer(t, aiDiffReply)
 	defer srv.Close()
-	a.AI.Config = ai.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"}
+	a.AI.Config = aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"}
 	a.AI.Draft = "给 main.go 加一行注释"
 	a.SendAI()
 	if len(a.AI.Messages) > 0 {

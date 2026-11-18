@@ -39,8 +39,17 @@ func TestScreenshots(t *testing.T) {
 	saveShot(t, tt, "lightcode-ui-split.png")
 }
 
+// saveShot writes one screenshot of the headless window. It writes only
+// when LIGHTCODE_UPDATE_SHOTS is set: the images are committed artifacts
+// the docs show, and a test run should not rewrite them for a one-pixel
+// difference. Set LIGHTCODE_UPDATE_SHOTS=1 to take them again after a
+// visual change.
 func saveShot(t *testing.T, tt *ui.Tester, name string) {
 	t.Helper()
+	if os.Getenv("LIGHTCODE_UPDATE_SHOTS") == "" {
+		t.Logf("%s not written (set LIGHTCODE_UPDATE_SHOTS=1 to refresh)", name)
+		return
+	}
 	img := tt.Image()
 	out := filepath.Join("..", "..", "..", "_shots", name)
 	f, err := os.Create(out)

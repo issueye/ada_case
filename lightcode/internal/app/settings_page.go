@@ -147,6 +147,7 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 						savePrefs(a.Prefs)
 					}
 				})
+				a.aiPluginRow(c)
 				term := a.Prefs.TerminalEnabled
 				ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
 					ui.Column(c).Grow(1).Children(func() {
@@ -175,6 +176,23 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 				}
 			})
 		})
+	})
+}
+
+// aiPluginRow shows the assistant's process plugin: whether it runs, and
+// the button that replaces it.
+func (a *App) aiPluginRow(c *ui.Context) {
+	st := a.aiPluginStatus()
+	ui.Row(c).Gap(8).AlignItems(ui.Center).Children(func() {
+		ui.Column(c).Grow(1).Children(func() {
+			ui.Text(c, "AI 进程插件").FontSize(11).TextColor(theme.Text)
+			ui.Text(c, aiPluginText(st)).FontSize(9).TextColor(theme.Faint).SingleLine()
+		})
+		if st.Running {
+			if ui.Button(c, "重启").Height(20).Padding(0, 6).Radius(3).Label("重启插件").Clicked() {
+				a.RestartAI()
+			}
+		}
 	})
 }
 
