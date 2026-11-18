@@ -2,7 +2,7 @@
 // completions stream, read event by event so the panel shows text as it
 // arrives. The key comes from the system's store (mygo.Secrets) and the
 // HTTP client follows the desktop's proxy settings.
-package ai
+package provider
 
 import (
 	"bufio"
@@ -14,8 +14,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-
-	"github.com/egoist/mygo/netproxy"
 )
 
 // ErrNoKey is returned when no API key is configured.
@@ -63,12 +61,14 @@ type Client struct {
 	http *http.Client
 }
 
-// New makes a client; it follows the system proxy, as other MyGo HTTP
-// does, and leaves timeouts to the context.
+// New makes a client; it follows the proxy environment variables and
+// leaves timeouts to the context.
 func New(cfg Config) *Client {
 	return &Client{
-		cfg:  cfg.Normalize(),
-		http: &http.Client{Transport: netproxy.Transport()},
+		cfg: cfg.Normalize(),
+		// The default transport follows HTTP(S)_PROXY; the editor's own
+		// system-proxy setting is not carried across the process boundary.
+		http: &http.Client{},
 	}
 }
 

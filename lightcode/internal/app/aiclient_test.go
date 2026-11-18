@@ -1,35 +1,44 @@
 package app
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/egoist/mygo/ui"
 
+	"lightcode.ai/client/protocol"
+
 	"lightcode/internal/aiplugin"
 )
 
-// TestAIPluginCommand checks the default: the app spawns itself with the
-// plugin subcommand, so one binary carries the editor and its assistant.
-func TestAIPluginCommand(t *testing.T) {
-	t.Setenv("LIGHTCODE_AI_PLUGIN", "")
-	exe, err := os.Executable()
+// TestAIPluginCommandFromEnv points the editor at the plugin's own build.
+func TestAIPluginCommandFromEnv(t *testing.T) {
+	t.Setenv("LIGHTCODE_AI_PLUGIN", `C:\tools\lightcode-ai.exe`)
+	cmd, err := aiPluginCommand()
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := aiPluginCommand()
-	if len(cmd) != 2 || cmd[0] != exe || cmd[1] != "ai-provider" {
-		t.Fatalf("command = %v, want [%s ai-provider]", cmd, exe)
+	if len(cmd) != 1 || cmd[0] != `C:\tools\lightcode-ai.exe` {
+		t.Fatalf("command = %v", cmd)
 	}
 }
 
-// TestAIPluginCommandSeparate points the app at a plugin built on its own.
-func TestAIPluginCommandSeparate(t *testing.T) {
-	t.Setenv("LIGHTCODE_AI_PLUGIN", `C:\tools\lightcode-ai.exe`)
-	cmd := aiPluginCommand()
-	if len(cmd) != 1 || cmd[0] != `C:\tools\lightcode-ai.exe` {
-		t.Fatalf("command = %v", cmd)
+// TestAIPluginCommandMissing says which binary is missing and how to build
+// it: the plugin is a separate project, so nothing falls back silently.
+func TestAIPluginCommandMissing(t *testing.T) {
+	t.Setenv("LIGHTCODE_AI_PLUGIN", "")
+	t.Setenv("PATH", "")
+	if _, err := aiPluginCommand(); err == nil {
+		t.Fatalf("a missing plugin was found")
+	} else if !strings.Contains(err.Error(), aiPluginName()) || !strings.Contains(err.Error(), "lightcode-ai") {
+		t.Fatalf("error = %v", err)
+	}
+}
+
+// TestAIPluginName names the plugin per platform.
+func TestAIPluginName(t *testing.T) {
+	if !strings.HasPrefix(aiPluginName(), "lightcode-ai") {
+		t.Fatalf("name = %q", aiPluginName())
 	}
 }
 
@@ -40,9 +49,10 @@ func TestAIPluginText(t *testing.T) {
 		st   aiplugin.Status
 		want string
 	}{
-		{aiplugin.Status{Running: true, PID: 4242}, "进程插件 · 运行中 · pid 4242"},
+		{aiplugin.Status{Running: true, PID: 4242, Name: protocol.Name, Version: protocol.Version},
+			"进程插件 · 运行中 · " + protocol.Name + " v" + protocol.Version + " · pid 4242"},
 		{aiplugin.Status{Err: "exit status 1"}, "进程插件 · 上次退出：exit status 1"},
-		{aiplugin.Status{}, "进程插件 · 按需启动（首次提问时拉起）"},
+		{aiplugin.Status{}, "进程插件 · 按需启动（首次提问时拉起独立进程）"},
 	} {
 		if got := aiPluginText(tc.st); got != tc.want {
 			t.Errorf("text = %q, want %q", got, tc.want)
@@ -59,7 +69,7 @@ func TestAIPluginRow(t *testing.T) {
 	if !tt.HasText("AI 进程插件") {
 		t.Fatalf("no plugin row; texts %q", tt.Texts())
 	}
-	if !tt.HasText("进程插件 · 按需启动（首次提问时拉起）") {
+	if !tt.HasText("进程插件 · 按需启动（首次提问时拉起独立进程）") {
 		t.Errorf("idle plugin text missing; texts %q", tt.Texts())
 	}
 	if a.AI.client != nil {
@@ -85,7 +95,7 @@ func TestAIPluginClose(t *testing.T) {
 func TestAIPluginStatusWithoutClient(t *testing.T) {
 	a, _ := testWorkspace(t)
 	st := a.aiPluginStatus()
-	if st.Name != aiplugin.Name || !strings.Contains(aiPluginText(st), "按需启动") {
+	if st.Name != protocol.Name || !strings.Contains(aiPluginText(st), "按需启动") {
 		t.Fatalf("status = %+v, text = %q", st, aiPluginText(st))
 	}
 }

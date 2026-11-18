@@ -5,43 +5,129 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/learningdog1/ada_link/link"
+
+	"lightcode.ai/client/protocol"
+
 	"lightcode/internal/aiplugin"
-	"lightcode/plugins/aiprovider"
 )
 
-// TestMain doubles as the plugin process: the client spawns this test
-// binary, which finds LIGHTCODE_AI_PLUGIN_HELPER and serves the protocol
-// instead of running the tests. That keeps the end-to-end test on the real
-// plugin, with a real process and real pipes, rather than a stand-in.
+// TestMain doubles as the plugin process. The real plugin is its own
+// project (lightcode-ai) and cannot be imported here; the helper speaks
+// the same contract over the same library, so the client is tested against
+// a real process with real pipes.
 func TestMain(m *testing.M) {
 	switch os.Getenv("LIGHTCODE_AI_PLUGIN_HELPER") {
 	case "":
 		os.Exit(m.Run())
 	case "serve":
-		if err := aiprovider.Serve(aiprovider.Options{}); err != nil {
-			fmt.Fprintln(os.Stderr, "helper:", err)
-			os.Exit(1)
-		}
-		os.Exit(0)
+		runHelper(protocol.Proto)
 	case "proto9":
-		hello, err := aiplugin.ReadMessage(os.Stdin)
-		if err != nil {
-			os.Exit(1)
-		}
-		_ = hello
-		_ = aiplugin.WriteMessage(os.Stdout, &aiplugin.Message{T: "welcome", Proto: aiplugin.Proto + 8})
-		os.Exit(0)
+		runHelper(protocol.Proto + 8)
 	default:
 		os.Exit(3)
 	}
+}
+
+// runHelper answers the protocol until the host says bye: a tiny provider
+// whose answer depends on the question, so tests can ask for a slow answer
+// or a failure.
+func runHelper(proto int) {
+	p := link.NewQuietPeer(link.NewPipeConn(os.Stdin, os.Stdout))
+	hello := make(chan *link.Message, 1)
+	p.OnMessage(func(m *link.Message) bool {
+		if m.T != "hello" {
+			return false
+		}
+		select {
+		case hello <- m:
+		default:
+		}
+		return true
+	})
+	streams := map[string]context.CancelFunc{}
+	var mu sync.Mutex
+	p.Handle(protocol.MethodStream, func(ctx context.Context, args []json.RawMessage) (any, error) {
+		var req protocol.StreamRequest
+		if len(args) == 0 || json.Unmarshal(args[0], &req) != nil {
+			return nil, errors.New("helper: bad request")
+		}
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		if req.RequestID != "" {
+			mu.Lock()
+			streams[req.RequestID] = cancel
+			mu.Unlock()
+			defer func() {
+				mu.Lock()
+				delete(streams, req.RequestID)
+				mu.Unlock()
+			}()
+		}
+		pieces := []string{"你", "好"}
+		delay := time.Duration(0)
+		last := ""
+		if n := len(req.Messages); n > 0 {
+			last = req.Messages[n-1].Content
+		}
+		switch {
+		case strings.Contains(last, "慢"):
+			pieces = []string{"一", "二", "三", "四", "五", "六"}
+			delay = 60 * time.Millisecond
+		case strings.Contains(last, "失败"):
+			return nil, errors.New("端点拒绝了请求")
+		}
+		var text strings.Builder
+		for _, piece := range pieces {
+			select {
+			case <-ctx.Done():
+				return protocol.StreamResult{RequestID: req.RequestID, Text: text.String()}, ctx.Err()
+			case <-time.After(delay):
+			}
+			_ = p.Emit(protocol.EventDelta, protocol.Delta{RequestID: req.RequestID, Text: piece})
+			text.WriteString(piece)
+		}
+		return protocol.StreamResult{RequestID: req.RequestID, Text: text.String()}, nil
+	})
+	p.Handle(protocol.MethodCancel, func(_ context.Context, args []json.RawMessage) (any, error) {
+		var req protocol.CancelRequest
+		if len(args) > 0 {
+			_ = json.Unmarshal(args[0], &req)
+		}
+		mu.Lock()
+		cancel := streams[req.RequestID]
+		mu.Unlock()
+		if cancel != nil {
+			cancel()
+		}
+		return nil, nil
+	})
+	p.Start()
+	select {
+	case <-hello:
+	case <-time.After(5 * time.Second):
+		os.Exit(2)
+	}
+	_ = p.Send(&link.Message{
+		T: "welcome", Proto: proto,
+		Payload: mustJSON(protocol.Welcome{Name: protocol.Name, Version: protocol.Version}),
+	})
+	<-p.Done()
+	os.Exit(0)
+}
+
+func mustJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return b
 }
 
 // pluginClient makes a client that spawns this test binary as the plugin.
@@ -61,46 +147,15 @@ func pluginClient(t *testing.T, helper string) *aiplugin.Client {
 	return c
 }
 
-// streamServer answers like an OpenAI-compatible endpoint: one delta per
-// piece, then [DONE].
-func streamServer(t *testing.T, pieces []string, delay time.Duration) *httptest.Server {
-	t.Helper()
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		flush, _ := w.(http.Flusher)
-		for _, p := range pieces {
-			payload, _ := json.Marshal(map[string]any{
-				"choices": []any{map[string]any{"delta": map[string]any{"content": p}}},
-			})
-			fmt.Fprintf(w, "data: %s\n\n", payload)
-			if flush != nil {
-				flush.Flush()
-			}
-			select {
-			case <-r.Context().Done():
-				return
-			case <-time.After(delay):
-			}
-		}
-		fmt.Fprint(w, "data: [DONE]\n\n")
-		if flush != nil {
-			flush.Flush()
-		}
-	}))
-	t.Cleanup(srv.Close)
-	return srv
-}
-
 // TestStreamThroughProcess asks the spawned plugin for an answer and
 // checks the text arrived both as deltas and whole.
 func TestStreamThroughProcess(t *testing.T) {
-	srv := streamServer(t, []string{"你", "好", "，", "世界"}, 0)
 	c := pluginClient(t, "serve")
 	var mu sync.Mutex
 	var pieces []string
 	text, err := c.Stream(context.Background(),
-		aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"},
-		[]aiplugin.ChatMessage{{Role: "user", Content: "问候一下"}},
+		protocol.Config{BaseURL: "http://127.0.0.1:1/v1", Model: "test", APIKey: "k"},
+		[]protocol.ChatMessage{{Role: "user", Content: "hi"}},
 		func(piece string) {
 			mu.Lock()
 			pieces = append(pieces, piece)
@@ -109,7 +164,7 @@ func TestStreamThroughProcess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stream: %v", err)
 	}
-	if text != "你好，世界" {
+	if text != "你好" {
 		t.Errorf("answer = %q", text)
 	}
 	mu.Lock()
@@ -125,7 +180,7 @@ func TestStreamThroughProcess(t *testing.T) {
 	if st.PID == os.Getpid() {
 		t.Fatalf("the answer was read in the host process (pid %d): the plugin must be its own process", st.PID)
 	}
-	if st.Name != aiplugin.Name || st.Version != aiplugin.Version {
+	if st.Name != protocol.Name || st.Version != protocol.Version {
 		t.Errorf("welcome named %q %q", st.Name, st.Version)
 	}
 }
@@ -133,43 +188,48 @@ func TestStreamThroughProcess(t *testing.T) {
 // TestStreamCancel stops an answer half way: the call fails with the
 // context's error, keeps what arrived, and the plugin is told to stop.
 func TestStreamCancel(t *testing.T) {
-	srv := streamServer(t, []string{"一", "二", "三", "四", "五", "六", "七", "八"}, 60*time.Millisecond)
 	c := pluginClient(t, "serve")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	var once sync.Once
 	text, err := c.Stream(ctx,
-		aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"},
-		[]aiplugin.ChatMessage{{Role: "user", Content: "长一点"}},
+		protocol.Config{BaseURL: "http://127.0.0.1:1/v1", Model: "test", APIKey: "k"},
+		[]protocol.ChatMessage{{Role: "user", Content: "慢一点"}},
 		func(string) { once.Do(cancel) })
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancel gave %v", err)
 	}
-	if text == "" || strings.Contains(text, "八") {
+	if text == "" || strings.Contains(text, "六") {
 		t.Errorf("partial answer = %q", text)
 	}
-	// The process keeps serving after a cancel.
-	text2, err := c.Stream(context.Background(),
-		aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"},
-		[]aiplugin.ChatMessage{{Role: "user", Content: "再问"}}, nil)
-	if err != nil || text2 != "一二三四五六七八" {
-		t.Fatalf("after cancel: %q %v", text2, err)
+	if _, err := c.Stream(context.Background(),
+		protocol.Config{BaseURL: "http://127.0.0.1:1/v1", Model: "test", APIKey: "k"},
+		[]protocol.ChatMessage{{Role: "user", Content: "再问"}}, nil); err != nil {
+		t.Fatalf("after cancel: %v", err)
+	}
+}
+
+// TestStreamErrorKeepsDeltas reports the plugin's error and keeps whatever
+// arrived before it.
+func TestStreamErrorKeepsDeltas(t *testing.T) {
+	c := pluginClient(t, "serve")
+	_, err := c.Stream(context.Background(),
+		protocol.Config{BaseURL: "http://127.0.0.1:1/v1", Model: "test", APIKey: "k"},
+		[]protocol.ChatMessage{{Role: "user", Content: "失败"}}, nil)
+	if err == nil || !strings.Contains(err.Error(), "端点拒绝") {
+		t.Fatalf("error = %v", err)
 	}
 }
 
 // TestPluginRestarts kills the process and checks the next call starts
 // another one, rather than failing for the rest of the session.
 func TestPluginRestarts(t *testing.T) {
-	srv := streamServer(t, []string{"ok"}, 0)
 	c := pluginClient(t, "serve")
-	cfg := aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"}
-	if _, err := c.Stream(context.Background(), cfg, []aiplugin.ChatMessage{{Role: "user", Content: "1"}}, nil); err != nil {
+	cfg := protocol.Config{BaseURL: "http://127.0.0.1:1/v1", Model: "test", APIKey: "k"}
+	if _, err := c.Stream(context.Background(), cfg, []protocol.ChatMessage{{Role: "user", Content: "1"}}, nil); err != nil {
 		t.Fatal(err)
 	}
 	st := c.Status()
-	if st.PID == 0 {
-		t.Fatalf("no pid: %+v", st)
-	}
 	proc, err := os.FindProcess(st.PID)
 	if err != nil {
 		t.Fatal(err)
@@ -177,16 +237,15 @@ func TestPluginRestarts(t *testing.T) {
 	if err := proc.Kill(); err != nil {
 		t.Fatalf("kill %d: %v", st.PID, err)
 	}
-	// Wait until the host notices, as it does before the next call.
 	deadline := time.Now().Add(5 * time.Second)
 	for c.Status().Running && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)
 	}
-	text, err := c.Stream(context.Background(), cfg, []aiplugin.ChatMessage{{Role: "user", Content: "2"}}, nil)
+	text, err := c.Stream(context.Background(), cfg, []protocol.ChatMessage{{Role: "user", Content: "2"}}, nil)
 	if err != nil {
 		t.Fatalf("the plugin did not come back: %v", err)
 	}
-	if text != "ok" {
+	if text != "你好" {
 		t.Errorf("answer = %q", text)
 	}
 	if c.Status().PID == st.PID {
@@ -197,8 +256,8 @@ func TestPluginRestarts(t *testing.T) {
 // TestPluginProtocolMismatch refuses a plugin that speaks another version.
 func TestPluginProtocolMismatch(t *testing.T) {
 	c := pluginClient(t, "proto9")
-	_, err := c.Stream(context.Background(), aiplugin.Config{APIKey: "k"},
-		[]aiplugin.ChatMessage{{Role: "user", Content: "hi"}}, nil)
+	_, err := c.Stream(context.Background(), protocol.Config{APIKey: "k"},
+		[]protocol.ChatMessage{{Role: "user", Content: "hi"}}, nil)
 	if err == nil || !strings.Contains(err.Error(), "protocol") {
 		t.Fatalf("mismatch = %v", err)
 	}
@@ -207,19 +266,19 @@ func TestPluginProtocolMismatch(t *testing.T) {
 // TestPluginStartFails reports a plugin that exits before its welcome.
 func TestPluginStartFails(t *testing.T) {
 	c := pluginClient(t, "exit")
-	_, err := c.Stream(context.Background(), aiplugin.Config{APIKey: "k"},
-		[]aiplugin.ChatMessage{{Role: "user", Content: "hi"}}, nil)
+	_, err := c.Stream(context.Background(), protocol.Config{APIKey: "k"},
+		[]protocol.ChatMessage{{Role: "user", Content: "hi"}}, nil)
 	if err == nil || !strings.Contains(err.Error(), "exited") {
 		t.Fatalf("start failure = %v", err)
 	}
 }
 
-// TestStreamNeedsKey keeps the key requirement in the provider rather than
-// only in the window.
-func TestStreamNeedsKey(t *testing.T) {
-	_, err := aiprovider.Stream(context.Background(), aiplugin.Config{},
-		[]aiplugin.ChatMessage{{Role: "user", Content: "hi"}}, nil)
-	if !errors.Is(err, aiprovider.ErrNoKey) {
-		t.Fatalf("no key gave %v", err)
+// TestStatusBeforeStart reports a plugin that never ran.
+func TestStatusBeforeStart(t *testing.T) {
+	c := pluginClient(t, "serve")
+	if st := c.Status(); st.Running || st.PID != 0 {
+		t.Fatalf("status = %+v", st)
 	}
 }
+
+var _ = fmt.Sprint

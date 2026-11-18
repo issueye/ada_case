@@ -202,12 +202,13 @@ type Command struct {
 
 | # | 任务 | 验收 | 状态 |
 |---|---|---|---|
-| AI-1 | 分析 `E:\codes\go_projects\ada_link` 的进程模型与消息层，写清哪些能借、哪些不借 | 有独立设计文档与代码地图 | ✅ [ai-plugin.md](ai-plugin.md) |
-| AI-2 | 协议与宿主端：长度前缀 JSON、`call`/`reply`/`event`/`bye`、`hello`/`welcome` + 版本校验、请求 ID 取消 | 真子进程能流式回答、取消、被杀后换新 | ✅ `internal/aiplugin`；`peer_test.go`、`client_test.go` |
-| AI-3 | 插件端：`plugins/aiprovider` 的 `Serve` 与方法 `ai.stream`/`ai.cancel`；网络客户端只在此进程 | 插件崩溃不影响窗口 | ✅ `plugins/aiprovider/serve.go` |
-| AI-4 | 窗口接线：`exe + "ai-provider"` 自执行、懒启动、关闭即退、`LIGHTCODE_AI_PLUGIN` 外部插件、能力面板状态与「重启」、子命令分派 | 能力面板显示按需启动/运行中 pid；真机可用 | ✅ `app/aiclient.go`、`cmd/lightcode/main.go`；`TestAIProviderSubcommand` |
-| AI-5 | LOGO：深/浅两版 SVG、512 PNG、256 内嵌图标（窗口 `SetIcon`）、32px 可辨性 | 图标在标题栏/任务栏显示，SVG 与 PNG 一致 | ✅ `docs/logo.svg`、`docs/logo-light.svg`、`lightcode/assets/icon.png` |
-| AI-6 | 独立分发的 `lightcode-ai` 构建目标与插件权限/清单 | 可安装第三方插件 | ⬜ 未做，协议已留出 `LIGHTCODE_AI_PLUGIN` |
+| AI-1 | 分析 `ada_link` 的进程模型与消息层，把它并入仓库（`ada_link/`，保留原模块路径） | 并入后 `go build/vet/test` 通过 | ✅ `ada_link/`；`link` 原有测试通过 |
+| AI-2 | 让 `link` 可用于管道：`Peer` 接 `io.ReadWriteCloser`、`PipeConn`、`NewQuietPeer`/`Start` | 插件与宿主都能在 stdin/stdout 上对话 | ✅ `ada_link/link/proto.go`、`link/pipe.go` |
+| AI-3 | AI 客户端独立项目：`lightcode-ai/` 自己的 `go.mod`、`protocol`、`provider`、`serve`、二进制 | 可单独构建与测试；不 import 编辑器任何包 | ✅ `lightcode-ai/`、`TestStream`/`TestCancel`/`TestNoKey` |
+| AI-4 | 编辑器宿主侧只留协议：拉起外部二进制、发现规则（env → 同目录 → cwd → PATH）、流式路由、取消、重启、状态 | 缺插件时报构建命令而非静默回退；真机跑通 | ✅ `internal/aiplugin`；真插件冒烟（编辑器 pid ≠ 插件 pid） |
+| AI-5 | 去耦检查：插件不碰文件/凭据；编辑器不 import `provider`/`serve`；面板逻辑用注入 runner 测试 | 依赖方向单向 | ✅ `go list -deps` 检查；`runner` 注入 |
+| AI-6 | LOGO：深/浅两版 SVG、512 PNG、256 内嵌图标（窗口 `SetIcon`）、32px 可辨性 | 图标在标题栏/任务栏显示，SVG 与 PNG 一致 | ✅ `docs/logo.svg`、`assets/icon.png` |
+| AI-7 | 独立分发：插件清单/权限/签名与打包随附 | 可安装第三方插件 | ⬜ 预留 `LIGHTCODE_AI_PLUGIN` 入口 |
 
 ## 3. WBS（按模块，含依赖）
 
@@ -305,7 +306,8 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-17 | UI 修正 | 标签右键菜单（关闭/关闭其他/关闭已保存/复制路径/显示）；AI 收起栏位并入编辑区（去掉右侧白条） | 测试 90 个全绿；浅色收起态截图 _shots/lightcode-light-rail.png |
 | 2026-11-17 | AI 浮标与悬浮窗（追加） | 收起的浮动卡片与悬停预览、浮标/浮窗拖动与位置持久化、悬浮窗标题头（左侧抓手拖动，右侧模式/设置/关闭）、标签右键菜单改为主题内绘制 | 测试 95 个全绿；截图 _shots/lightcode-ui-ai-float.png |
 | 2026-11-18 | 流畅度修复（拉取 origin 1370f26） | Git 状态与历史改为后台 goroutine 读取（5 s 轮询 + 打开 SCM 时刷新，同时只跑一个）、AI 打字机改为主线程定时推进、浮窗/浮标拖拽按窗口坐标计算、空闲时仅在打开文件变化时请求帧 | 拉取后 `go build/vet/test` 全绿，测试 97 个 |
-| 2026-11-18 | AI 进程插件（追加） | `ada_link` 分析 → `internal/aiplugin`（帧/Peer/宿主 Client）→ `plugins/aiprovider`（`ai.stream`/`ai.cancel`）→ 窗口懒启动、`ai-provider` 自执行子命令、能力面板状态与重启 | 测试 117 个全绿；真机 `lightcode.exe ai-provider` 用本地端点验证流式、取消、换进程；截图 _shots/lightcode-ai-plugin.png |
+| 2026-11-18 | AI 进程插件（初版） | `internal/aiplugin`（自写帧/Peer/宿主 Client）→ `plugins/aiprovider`（进程内 Serve）→ 窗口懒启动、`ai-provider` 自执行子命令 | 测试 117 个全绿；真机流式验证；截图 _shots/lightcode-ai-plugin.png |
+| 2026-11-18 | ada_link 并入 + AI 独立项目 | `ada_link/` 并入本仓库（含 `link` 的管道支持）；新建独立模块 `lightcode-ai/`（protocol/provider/serve + 自己的二进制）；编辑器只保留 `internal/aiplugin` 宿主侧；删除 `internal/ai`、`plugins/aiprovider` 与自执行子命令；发现规则 env → 同目录 → cwd → PATH | 三模块 `go build/vet/test` 全绿（编辑器 108 个、插件 9 个、link 原有）；真插件冒烟：编辑器 pid 19752 / 插件 pid 7976、`lightcode-ai v0.2.0` |
 | 2026-11-18 | LOGO（追加） | `docs/logo.svg` / `logo-light.svg`（512，`</>` 母题）、512/32 PNG、`lightcode/assets/icon.png`（256，`//go:embed` 进窗口 `SetIcon`） | 32px 可辨；SVG 与 PNG 逐像素一致（Chromium 栅格化）；`docs/ai-plugin.md` 记录设计 |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
 

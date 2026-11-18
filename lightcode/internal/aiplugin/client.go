@@ -1,3 +1,13 @@
+// Package aiplugin is the editor's side of the assistant plugin: it starts
+// the lightcode-ai process, hands it a question, and reads the answer back
+// as deltas.
+//
+// The wire is the link library's — call, reply, event and the
+// hello/welcome handshake over length-prefixed JSON — and the payloads are
+// the plugin project's protocol package. This package adds only what the
+// host needs: when to spawn, when to restart, and which delta belongs to
+// which question. It imports nothing from the plugin beyond its contract,
+// and the plugin imports nothing from the editor.
 package aiplugin
 
 import (
@@ -13,13 +23,16 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/learningdog1/ada_link/link"
+
+	"lightcode.ai/client/protocol"
 )
 
 // Options configure a Client: which process to spawn, and how long to wait
-// for its handshake.
+// for its welcome.
 type Options struct {
 	// Command is the plugin's executable and arguments, and is required.
-	// The host passes itself with a subcommand, as cmd/lightcode does.
 	Command []string
 	// Dir is the plugin's working directory.
 	Dir string
@@ -45,17 +58,16 @@ type Status struct {
 	Err string
 }
 
-// Client is the host's end of the plugin: it spawns the process on first
-// use, streams answers through it, and starts another if it dies.
+// Client is the host's end: it spawns the plugin on first use, streams
+// answers through it, and starts another if it dies.
 //
-// Standard input and output are the plugin's pipes, so the child's own
-// output must go to standard error: a line of log on stdout would be read
-// as a message.
+// The plugin's standard output is the protocol, so it must log to standard
+// error; a line on stdout would be read as a message.
 type Client struct {
 	opts Options
 
 	mu      sync.Mutex
-	peer    *Peer
+	peer    *link.Peer
 	proc    *process
 	name    string
 	version string
@@ -98,15 +110,15 @@ func (c *Client) Status() Status {
 // Stream asks the plugin for an answer to msgs and calls onDelta with each
 // piece as it arrives; it returns the whole answer. Cancel ctx to stop: the
 // call fails with ctx's error, and the plugin stops reading the endpoint.
-func (c *Client) Stream(ctx context.Context, cfg Config, msgs []ChatMessage, onDelta func(string)) (string, error) {
+func (c *Client) Stream(ctx context.Context, cfg protocol.Config, msgs []protocol.ChatMessage, onDelta func(string)) (string, error) {
 	p, err := c.ensure()
 	if err != nil {
 		return "", err
 	}
 	id := newID()
-	ch := make(chan Delta, 64)
-	off := p.OnEvent(EventDelta, func(raw json.RawMessage) {
-		var d Delta
+	ch := make(chan protocol.Delta, 64)
+	off := p.OnEvent(protocol.EventDelta, func(raw json.RawMessage) {
+		var d protocol.Delta
 		if json.Unmarshal(raw, &d) != nil || d.RequestID != id {
 			return
 		}
@@ -117,19 +129,19 @@ func (c *Client) Stream(ctx context.Context, cfg Config, msgs []ChatMessage, onD
 	})
 	defer off()
 
-	req := StreamRequest{RequestID: id, Config: cfg.Normalize(), Messages: msgs}
+	req := protocol.StreamRequest{RequestID: id, Config: cfg.Normalize(), Messages: msgs}
 	type answer struct {
 		text string
 		err  error
 	}
 	done := make(chan answer, 1)
 	go func() {
-		raw, err := p.Call(context.Background(), MethodStream, req)
+		raw, err := p.Call(context.Background(), protocol.MethodStream, req)
 		if err != nil {
 			done <- answer{err: err}
 			return
 		}
-		var res StreamResult
+		var res protocol.StreamResult
 		if len(raw) > 0 {
 			if err := json.Unmarshal(raw, &res); err != nil {
 				done <- answer{err: fmt.Errorf("aiplugin: cannot decode answer: %w", err)}
@@ -148,14 +160,14 @@ func (c *Client) Stream(ctx context.Context, cfg Config, msgs []ChatMessage, onD
 		case <-ctx.Done():
 			callCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			_, _ = p.Call(callCtx, MethodCancel, CancelRequest{RequestID: id})
+			_, _ = p.Call(callCtx, protocol.MethodCancel, protocol.CancelRequest{RequestID: id})
 		case <-stop:
 		case <-p.Done():
 		}
 	}()
 
 	var full strings.Builder
-	take := func(d Delta) {
+	take := func(d protocol.Delta) {
 		full.WriteString(d.Text)
 		if onDelta != nil {
 			onDelta(d.Text)
@@ -213,9 +225,9 @@ func (c *Client) Restart() {
 	c.stop(p, proc)
 }
 
-func (c *Client) stop(p *Peer, proc *process) {
+func (c *Client) stop(p *link.Peer, proc *process) {
 	if p != nil {
-		_ = p.Send(&Message{T: "bye"})
+		_ = p.Send(&link.Message{T: "bye"})
 		p.Close()
 	}
 	if proc != nil {
@@ -224,11 +236,11 @@ func (c *Client) stop(p *Peer, proc *process) {
 }
 
 // ensure returns a running peer, starting the process when there is none.
-func (c *Client) ensure() (*Peer, error) {
+func (c *Client) ensure() (*link.Peer, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	if c.closed {
-		return nil, ErrClosed
+		return nil, link.ErrClosed
 	}
 	if c.peer != nil {
 		select {
@@ -245,7 +257,7 @@ func (c *Client) ensure() (*Peer, error) {
 }
 
 // start spawns the plugin and takes its welcome; the caller holds the mutex.
-func (c *Client) start() (*Peer, error) {
+func (c *Client) start() (*link.Peer, error) {
 	if len(c.opts.Command) == 0 {
 		return nil, errors.New("aiplugin: no plugin command")
 	}
@@ -268,9 +280,9 @@ func (c *Client) start() (*Peer, error) {
 		return nil, fmt.Errorf("aiplugin: start %s: %w", c.opts.Command[0], err)
 	}
 	proc := newProcess(cmd)
-	p := NewQuietPeer(&pipeConn{r: out, w: in})
-	welcome := make(chan *Message, 1)
-	p.OnMessage(func(m *Message) bool {
+	p := link.NewQuietPeer(link.NewPipeConn(out, in))
+	welcome := make(chan *link.Message, 1)
+	p.OnMessage(func(m *link.Message) bool {
 		if m.T != "welcome" {
 			return false
 		}
@@ -281,21 +293,28 @@ func (c *Client) start() (*Peer, error) {
 		return true
 	})
 	p.Start()
-	fail := func(err error) (*Peer, error) {
+	fail := func(err error) (*link.Peer, error) {
 		p.Close()
 		proc.stop(500 * time.Millisecond)
 		c.err = err
 		return nil, err
 	}
-	if err := p.Send(&Message{T: "hello", Proto: Proto, Name: Name}); err != nil {
+	if err := p.Send(&link.Message{T: "hello", Proto: protocol.Proto, App: "lightcode"}); err != nil {
 		return fail(fmt.Errorf("aiplugin: hello: %w", err))
 	}
 	select {
 	case w := <-welcome:
-		if w.Proto != Proto {
-			return fail(fmt.Errorf("aiplugin: the plugin speaks protocol %d, not %d", w.Proto, Proto))
+		if w.Proto != protocol.Proto {
+			return fail(fmt.Errorf("aiplugin: the plugin speaks protocol %d, not %d", w.Proto, protocol.Proto))
 		}
-		c.name, c.version = w.Name, w.Version
+		var who protocol.Welcome
+		if len(w.Payload) > 0 {
+			_ = json.Unmarshal(w.Payload, &who)
+		}
+		c.name, c.version = who.Name, who.Version
+		if c.name == "" {
+			c.name = "lightcode-ai"
+		}
 	case <-p.Done():
 		return fail(fmt.Errorf("aiplugin: the plugin exited before its welcome: %v", p.Err()))
 	case <-time.After(c.opts.Timeout):
@@ -303,23 +322,6 @@ func (c *Client) start() (*Peer, error) {
 	}
 	c.peer, c.proc, c.err = p, proc, nil
 	return p, nil
-}
-
-// pipeConn joins a child's stdin and stdout into one connection.
-type pipeConn struct {
-	r io.ReadCloser
-	w io.WriteCloser
-}
-
-func (c *pipeConn) Read(p []byte) (int, error)  { return c.r.Read(p) }
-func (c *pipeConn) Write(p []byte) (int, error) { return c.w.Write(p) }
-
-func (c *pipeConn) Close() error {
-	err := c.r.Close()
-	if werr := c.w.Close(); err == nil {
-		err = werr
-	}
-	return err
 }
 
 // process is the spawned plugin, waited for off the main path.

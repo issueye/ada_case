@@ -13,10 +13,11 @@ import (
 	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 
+	"lightcode.ai/client/protocol"
+
 	"lightcode/internal/aiplugin"
 	"lightcode/internal/icons"
 	"lightcode/internal/theme"
-	"lightcode/plugins/aiprovider"
 )
 
 // How the assistant shows.
@@ -53,6 +54,10 @@ type aiDiffCard struct {
 	Err     string
 }
 
+// aiRunner streams one answer: the plugin client in a window, a function
+// in a test, so the panel can be exercised without spawning a process.
+type aiRunner func(ctx context.Context, cfg protocol.Config, msgs []protocol.ChatMessage, onDelta func(string)) (string, error)
+
 // aiState is the assistant's state across frames.
 type aiState struct {
 	Mode      int
@@ -60,7 +65,7 @@ type aiState struct {
 	Draft     string
 	Streaming bool
 	Err       string
-	Config    aiplugin.Config
+	Config    protocol.Config
 	// SettingsOpen edits the endpoint and the key.
 	SettingsOpen bool
 	SetBase      string
@@ -76,6 +81,8 @@ type aiState struct {
 	// client is the plugin process the answers come from, made on the
 	// first question.
 	client *aiplugin.Client
+	// runner replaces the plugin; tests set it.
+	runner aiRunner
 	cancel context.CancelFunc
 	seq    uint64
 }
@@ -83,7 +90,7 @@ type aiState struct {
 // initAI fills the assistant's configuration: the saved endpoint and
 // model, the key from the system store or the environment.
 func (a *App) initAI() {
-	a.AI.Config = aiplugin.DefaultConfig()
+	a.AI.Config = protocol.DefaultConfig()
 	if a.AI.SetBase != "" {
 		a.AI.Config.BaseURL = a.AI.SetBase
 	}
@@ -182,15 +189,20 @@ func (a *App) SendAI() {
 			answer.Content = answer.Full
 		}
 	}
-	if a.Win == nil {
-		// No window: the provider runs inline, the way search does. The
-		// window's path is the plugin process, below.
-		_, err := aiprovider.Stream(ctx, a.AI.Config, msgs, style)
-		finalize(err)
-		return
+	run := a.AI.runner
+	if run == nil {
+		client, err := a.aiClient()
+		if err != nil {
+			finalize(err)
+			return
+		}
+		run = client.Stream
 	}
-	client, err := a.aiClient()
-	if err != nil {
+	if a.Win == nil {
+		// No window: run the answer inline, the way search does, so a test
+		// needs no process. The window's path is the plugin process,
+		// through the same runner.
+		_, err := run(ctx, a.AI.Config, msgs, style)
 		finalize(err)
 		return
 	}
@@ -216,7 +228,7 @@ func (a *App) SendAI() {
 				a.advanceAIReveal(answer)
 			})
 		}
-		_, err := client.Stream(ctx, a.AI.Config, msgs, func(piece string) {
+		_, err := run(ctx, a.AI.Config, msgs, func(piece string) {
 			pending.WriteString(piece)
 			if time.Since(last) >= 50*time.Millisecond {
 				flush()
@@ -313,12 +325,12 @@ func (a *App) RetryAI() {
 
 // aiPrompt builds the messages: the contract, the open file, the recent
 // turns and the request.
-func (a *App) aiPrompt(request string) []aiplugin.ChatMessage {
-	var out []aiplugin.ChatMessage
+func (a *App) aiPrompt(request string) []protocol.ChatMessage {
+	var out []protocol.ChatMessage
 	system := "你是轻码 IDE 的编程助手。用户要求改代码时，请用 git unified diff 格式回答" +
 		"（放在 ```diff 代码块里），每个文件一个 diff；不要输出内联建议、不要声称已经修改文件。" +
 		"改动由用户在界面上确认后应用。其余问题用简洁的中文回答。"
-	out = append(out, aiplugin.ChatMessage{Role: "system", Content: system})
+	out = append(out, protocol.ChatMessage{Role: "system", Content: system})
 	if e := a.Col().Current(); e != nil {
 		text := e.Doc.Buffer.String()
 		if selected := e.State.SelectedText(); selected != "" {
@@ -333,13 +345,13 @@ func (a *App) aiPrompt(request string) []aiplugin.ChatMessage {
 				rel = r
 			}
 		}
-		out = append(out, aiplugin.ChatMessage{Role: "system", Content: "当前文件 " + rel + "：\n```\n" + text + "\n```"})
+		out = append(out, protocol.ChatMessage{Role: "system", Content: "当前文件 " + rel + "：\n```\n" + text + "\n```"})
 	}
 	for _, m := range a.AI.Messages {
 		if m.Role == "user" {
-			out = append(out, aiplugin.ChatMessage{Role: m.Role, Content: m.Content})
+			out = append(out, protocol.ChatMessage{Role: m.Role, Content: m.Content})
 		} else if m.Full != "" {
-			out = append(out, aiplugin.ChatMessage{Role: m.Role, Content: m.Full})
+			out = append(out, protocol.ChatMessage{Role: m.Role, Content: m.Full})
 		}
 	}
 	return out

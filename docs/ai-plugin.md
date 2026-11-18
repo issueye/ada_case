@@ -1,172 +1,136 @@
-# AI 进程插件（ai-provider）
+# AI 进程插件（lightcode-ai）
 
-> 把助手的网络调用移出编辑器进程：LightCode 的窗口里只留对话与 diff 卡片，
-> 真正读 SSE 的是一根标准输入 / 标准输出管道另一端的 `lightcode ai-provider`。
-> 本文先分析 `ada_link` 的进程间做法，再写本项目的协议、生命周期、安全与验证。
+> 助手从「编辑器里的一个包」变成「仓库里独立的一个项目」：自己的 `go.mod`、
+> 自己的二进制、自己的测试，和编辑器之间只有一条管道和一份协议。
+> `ada_link` 的代码并入了本仓库，插件的消息层就建立在它的 `link` 包上。
 
-## 1. 为什么做
+## 1. 三个部分，一条依赖线
 
-M4 的助手是进程内的：`internal/ai` 直接在窗口的 goroutine 里建 HTTP 请求、读
-SSE。它有三个问题：
+```
+ada_case/
+├── ada_link/          # 并入的进程间库（github.com/learningdog1/ada_link）
+├── lightcode-ai/      # AI 客户端：独立项目、独立二进制 lightcode-ai(.exe)
+│   ├── protocol/      #   契约：wire 类型与常量（不含任何编辑器代码）
+│   ├── provider/      #   OpenAI 兼容 SSE 客户端
+│   └── serve/         #   管道上的握手与 ai.stream / ai.cancel
+└── lightcode/         # 编辑器
+    └── internal/aiplugin/ # 只做宿主侧：拉起、流式路由、取消、重启、状态
+```
 
-| 问题 | 现象 |
-|---|---|
-| 网络在窗口进程里 | 端点卡住时，那个 goroutine 挂着；插件式的可替换性也无从谈起 |
-| 代码互相牵连 | 只要编译编辑器，就必须编译整个 OpenAI 客户端；换一家实现要重编整个应用 |
-| 故障没有边界 | 一个有问题的 provider 实现能拖垮窗口进程，而窗口本该与它无关 |
+依赖方向是单向的，且只有一条：
 
-进程插件的目标很小：**一条管道、一个版本号、一次一问一答的流式通道**，
-够用就好，不复制 `ada_link` 的像素中继。
-
-## 2. `ada_link` 分析
-
-`E:\codes\go_projects\ada_link` 是同一作者的另一个库：把**另一个 MyGo 应用的
-native UI 嵌进宿主窗口**。它对本项目有参考价值的部分是进程模型与消息层，而不是
-渲染。
-
-### 2.1 它的结构
-
-| 路径 | 内容 |
-|---|---|
-| `link/proto.go` | 消息定义、4 字节小端长度前缀 + JSON、`Peer`（call/reply/event）、`MaxMessage = 16 MiB`、`Proto = 1` |
-| `link/spawn.go` | `Spawn`：临时目录 + Unix socket + 随机 token，子进程经环境变量拿到 socket/ token，握手 `hello`/`welcome` |
-| `link/session.go` | 宿主端会话：帧环、输入转发、`Done/Err/OnClose`、关闭时先礼后兵（2 s 宽限再杀） |
-| `link/typed.go` | 泛型 `Call[Req,Res]` 与 `HandleFunc`：调用双方共用一套类型 |
-| `mygoembed/` | `Attach`（宿主把帧当纹理合成）、`Serve`（子进程离屏渲染同一份 `ui.View`） |
-| `panels/` | 多面板注册表、事件命名空间与广播 |
-
-关键协议语义（与本文直接相关）：
-
-- 每次调用有 `ID`，回复带 `OK`/`Value`/`Error`；调用方可带 context 先放弃等待，
-  迟到的回复被丢弃；
-- `event` 是单向通知，读循环里投递；监听者可以晚于事件到达；
-- 子进程退出、连接断开都会让 `Session.Done` 关闭，并把原因留给 `Err()`；
-- 传输安全靠 socket 权限 `0600` + 随机 token 的 `hello` 校验。
-
-### 2.2 哪些能借，哪些不能
-
-| `ada_link` 的做法 | 本项目采用 | 理由 |
+| 从 | 到 | 用来做什么 |
 |---|---|---|
-| `call`/`reply`/`event` 词汇与 `ID` 语义 | 借用 | 心智模型一致，流式答复可以拆成事件 + 最终回复 |
-| 4 字节长度前缀 + JSON、`MaxMessage` 上限 | 借用 | 与纯文本行协议相比能容下大段上下文，又不必自己发明编码 |
-| `hello`/`welcome` + `Proto` 校验 | 借用 | 版本不匹配时应当明确报错，而不是读出一堆怪消息 |
-| socket + 随机 token | **不用** | 管道是父进程私有的：没有第三方能连，token 只是多余的一层 |
-| 帧环、像素中继、输入转发 | 不用 | 插件没有界面，只有文本 |
-| 会话目录清理、帧确认 | 不用 | 管道随进程结束，系统回收 |
-| 关闭时 2 s 宽限再杀 | 借用 | 先发 `bye`，给 500 ms 自行退出，再杀 |
-| 泛型 `Call[Req,Res]` | 部分借用 | 协议层保留裸 JSON；上层用 `StreamRequest`/`StreamResult` 直接编解码 |
+| `lightcode` | `lightcode-ai/protocol` | 只拿 wire 类型与常量 |
+| `lightcode` | `ada_link/link` | 消息层（call/reply/event、握手、帧格式） |
+| `lightcode-ai` | `ada_link/link` | 同一套消息层 |
+| `lightcode-ai` | 编辑器 | **没有**：插件不 import 编辑器的任何包 |
+| `lightcode` | 插件实现 | **没有**：编辑器不 import `serve`/`provider` |
 
-结论：**借消息层，弃渲染层**。这样插件协议只有约 330 行（含客户端），
-不需要把 `ada_link` 作为依赖引进来（它依赖 MyGo 与 cgo-free 的 socket 路径，
-对只需要文本通道的项目是多余的）。
+`lightcode-ai` 因此可以单独 `go build`、单独测试、单独发布；编辑器的二进制里
+不再有 HTTP 客户端代码。反向也成立：插件不读编辑器的文件、不读凭据库，
+请求里带什么就用什么。
 
-## 3. 设计
+## 2. `ada_link` 并入了哪些，改了什么
 
-### 3.1 进程模型
+并入的是源码（`link`、`mygoembed`、`panels`、`install`、`internal/shm`、
+`examples`、`cmd`、文档），不含它原来的 `bin/` 与 `artifacts/`。模块路径保持
+`github.com/learningdog1/ada_link`，同级 `replace` 指向 `../ada_link`。
 
-```
-┌─────────────────────────────┐   stdin/stdout（私有管道）  ┌────────────────────┐
-│ lightcode 窗口进程           │◀──────────────────────────▶│ lightcode ai-provider │
-│  aiplugin.Client            │   长度前缀 JSON：call/reply │  aiprovider.Serve     │
-│  对话、diff、打字机、UI       │   event：答案的增量          │  internal/ai → HTTP   │
-└─────────────────────────────┘                            └────────────────────┘
-```
+为插件做的最小改动（其余原样）：
 
-- **自己拉起自己**：`aiPluginCommand()` 默认返回 `os.Executable() + "ai-provider"`。
-  一个构建产物同时是编辑器与插件，开发时 `go run ./cmd/lightcode` 也一样成立。
-  设置 `LIGHTCODE_AI_PLUGIN` 可以改指向单独构建的插件可执行文件。
-- **懒启动**：只有第一次提问才 `exec` 子进程。一个只写代码、不问 AI 的会话
-  不会为插件付内存与启动时间。
-- **卡死可换**：进程死掉后，下一次 `Stream` 自动再拉一个；能力面板里的「重启」
-  可以立刻换掉卡住的实现。
-- **窗口关闭即退出**：`OnClosed` 里发 `bye`、关管道，超时 500 ms 再杀。
-
-### 3.2 帧与消息
-
-帧：`uint32` 小端长度（`<= 16 MiB`）+ UTF-8 JSON。与 `ada_link` 相同。
-
-| `t` | 方向 | 字段 | 用途 |
-|---|---|---|---|
-| `hello` | 宿主 → 插件 | `proto`、`name` | 父进程先报协议版本 |
-| `welcome` | 插件 → 宿主 | `proto`、`name`、`version`、`methods` | 版本、插件身份、可用方法 |
-| `call` | 双向 | `id`、`m`、`a[]` | 调一个方法 |
-| `reply` | 双向 | `id`、`ok`、`v` / `e` | 结果或错误 |
-| `event` | 插件 → 宿主 | `n`、`p` | 流式增量 |
-| `bye` | 宿主 → 插件 | — | 有序退出 |
-
-方法：
-
-| 方法 | 参数 | 结果 | 说明 |
-|---|---|---|---|
-| `ai.stream` | `StreamRequest{requestID, config, messages}` | `StreamResult{requestID, text}` | 答复结束时回复；期间以 `delta` 事件流出 |
-| `ai.cancel` | `CancelRequest{requestID}` | `null` | 取消某个仍在进行的答复 |
-
-`delta` 事件载荷：`{requestID, text}`。**每个增量都带 request ID**：宿主用它在
-自己的事件路由里只把属于本次请求的片段交给打字机，迟到的片段会被丢弃。
-
-### 3.3 一次问答的时序
-
-```
-窗口线程            aiplugin.Client               插件进程            HTTP 端点
-   │ SendAI ──────────▶ ensure()：启动、hello/welcome
-   │                   │ call ai.stream ──────────▶ stream()
-   │                   │                           │ POST /chat/completions ─▶
-   │                   │◀── event delta ───────────│◀── SSE data: 片段 ───────
-   │ 每 50 ms 批量更新  │                           │
-   │                   │◀── reply {text} ──────────│ 结束 / 出错
-   │ ◀─ finalize、diff 卡片、打字机追平
-```
-
-取消时宿主发 `ai.cancel`；插件 `cancel()` 那个请求的 context，HTTP 请求随之中断，
-回复带 `context canceled`，宿主按取消处理（保留已到文本，不弹错误）。
-
-### 3.4 与窗口内的分工
-
-- 窗口进程：拼上下文（系统提示、当前文件 / 选中的文字、历史轮次）、
-  50 ms 批量写入、按帧揭示打字机、解析 diff、确认后写文件。
-  这些都是 UI 逻辑，留在窗口进程是对的。
-- 插件进程：只有「拿配置去请求、把片段流回来」一件事，不碰文件、不读凭据。
-
-**Key 不落盘在插件里**：窗口从系统凭据库（`mygo.Secrets`）读出，随每个请求
-经管道送过去，插件只放在内存里。管道是父进程私有的，不经网络、不经文件。
-
-### 3.5 无窗口路径
-
-测试与将来可能的 CLI 没有窗口，`SendAI` 直接调 `aiprovider.Stream`（同一份
-provider 实现，进程内），因此测试快、不需要拉起进程；窗口里走插件。两条路径
-共用 `aiprovider.Stream`，不会出现「测试通过、界面另一套逻辑」的分叉。
-
-## 4. 代码地图
-
-| 路径 | 内容 |
+| 改动 | 原因 |
 |---|---|
-| [`lightcode/internal/aiplugin/protocol.go`](../lightcode/internal/aiplugin/protocol.go) | 协议常量、帧读写、`Config`/`ChatMessage`/请求与事件结构 |
-| [`lightcode/internal/aiplugin/peer.go`](../lightcode/internal/aiplugin/peer.go) | `Peer`：call/reply/event、读循环、关闭与等待者唤醒 |
-| [`lightcode/internal/aiplugin/client.go`](../lightcode/internal/aiplugin/client.go) | 宿主端：拉起进程、握手、`Stream`（增量路由 + 取消）、`Status`、重启 |
-| [`lightcode/plugins/aiprovider/serve.go`](../lightcode/plugins/aiprovider/serve.go) | 插件端：`Serve`、`ai.stream`/`ai.cancel`、`Stream`（进程内共用） |
-| [`lightcode/internal/app/aiclient.go`](../lightcode/internal/app/aiclient.go) | 窗口接线：命令、懒启动、关闭、重启、能力面板文案 |
-| `lightcode/cmd/lightcode/main.go` | `ai-provider` 子命令分派 |
-| [`lightcode/internal/ai/ai.go`](../lightcode/internal/ai/ai.go) | OpenAI 兼容 SSE 客户端，只有插件（与无窗口路径）用它 |
+| `Peer` 的 `conn` 从 `net.Conn` 收紧为 `io.ReadWriteCloser` | 插件走父子进程的私有管道，不是 socket；`Peer` 只用 Read/Write/Close |
+| 新增 `link.PipeConn` / `NewPipeConn(r, w)` | 把 stdin/stdout 变成 `Peer` 能读写的连接 |
+| 新增 `link.NewQuietPeer` 与 `(*Peer).Start` | 先注册 `Handle`/`OnMessage`、再开始读循环，避免握手消息与处理器竞争 |
 
-## 5. 测试
+没有用的部分：帧环、像素中继、输入转发、会话目录、socket + token——插件没有
+界面，只有文本；管道是父进程私有的，第三方连不进来。
 
-| 测试 | 证明什么 |
-|---|---|
-| `aiplugin/peer_test.go` | 帧往返、超大帧拒绝、调用/回复、错误回复、事件、关闭后的调用 |
-| `aiplugin/client_test.go` | **真子进程**：握手、增量与整段一致、取消、被杀后自动换新进程、协议版本不符、启动即退出、空 Key |
-| `cmd/lightcode/main_test.go` | 真实分派：argv `ai-provider` 时回答 `hello`，而不是开窗口 |
-| `app/aiclient_test.go` | 默认命令是 `exe + ai-provider`、环境变量可改指、能力面板的「按需启动」与重启 |
-| `app/ai_test.go`、`m4_screenshot_test.go` | 无窗口路径：问答、diff 卡片、重试、Key 缺失 |
+## 3. 协议
 
-`client_test.go` 用测试二进制自身当插件（`LIGHTCODE_AI_PLUGIN_HELPER=serve`），
-所以跑的是 `aiprovider.Serve` 本体、真的 `exec`、真的管道、真的 HTTP。
+信封仍然是 `link.Message`（`t` = `hello`/`welcome`/`call`/`reply`/`event`/`bye`），
+4 字节小端长度 + JSON，单条上限 16 MiB。载荷是 `lightcode-ai/protocol` 的类型。
 
-## 6. 限制与后续
+| 消息 | 方向 | 载荷 | 用途 |
+|---|---|---|---|
+| `hello` | 编辑器 → 插件 | `proto`、`app` | 报协议版本 |
+| `welcome` | 插件 → 编辑器 | `Welcome{name, version, methods}` | 身份、版本、可用方法 |
+| `call ai.stream` | 编辑器 → 插件 | `StreamRequest{requestID, config, messages}` | 问一次 |
+| `event delta` | 插件 → 编辑器 | `Delta{requestID, text}` | 回答的增量 |
+| `reply` | 插件 → 编辑器 | `StreamResult{requestID, text}` 或错误 | 回答结束 |
+| `call ai.cancel` | 编辑器 → 插件 | `CancelRequest{requestID}` | 停止某次回答 |
+| `bye` | 编辑器 → 插件 | — | 有序退出 |
 
-- **未验证真实模型**：所有测试打的是本地 httptest 端点，与 M4 的结论一致
-  （没有可用的 Key）。
-- **进程数固定为一个**：多窗口 / 多会话会串行共用同一个插件；目前只有单窗口。
-- **没有插件清单与权限模型**：现在只信任「自己拉起的自己」；若要装第三方插件，
-  需要签名、权限声明、版本兼容，这些都没做。
-- **没有独立分发**：`LIGHTCODE_AI_PLUGIN` 已留出口，但还没有构建 / 打包单独
-  `lightcode-ai` 的目标。
+`requestID` 是关键：一次 `ai.stream` 的增量和取消都带着它，编辑器只把属于
+本次提问的片段交给打字机，迟到片段丢弃。
+
+## 4. 进程生命周期
+
+- **发现**：`LIGHTCODE_AI_PLUGIN`（显式路径）→ 编辑器可执行文件同目录的
+  `lightcode-ai(.exe)` → 当前目录 → `PATH`。找不到就报错并给出构建命令，
+  不再回退到编辑器自己的进程。
+- **懒启动**：第一次提问才 `exec`；只写代码不问 AI 的会话不付代价。
+- **握手**：编辑器发 `hello`，等 `welcome`（默认 5 s）；版本不符直接失败。
+- **流式**：`ai.stream` 在插件里是一个 goroutine，`delta` 事件按到达顺序写回。
+- **取消**：编辑器取消 context → 发 `ai.cancel` → 插件取消该请求的 context，
+  HTTP 请求中断；已到的文本保留。
+- **崩溃/被杀**：下一次提问检测到连接结束，自动再拉一个进程；能力面板里的
+  「重启」可手动换掉。
+- **关闭**：窗口关闭时发 `bye`、关管道，500 ms 宽限后杀进程。
+
+## 5. 安全
+
+- Key 由编辑器从系统凭据库（`mygo.Secrets`）读出，随每个请求经管道传给插件，
+  插件只放在内存里，不写盘。
+- 管道是父子进程私有的标准流，不经网络、不经临时文件；没有 `ada_link` 的
+  socket/token 那一层，因为不存在第三方能连上的路径。
+- 插件不读编辑器的工作区、不读凭据库，也不改文件：它只发 HTTP。
+
+## 6. 构建与运行
+
+```powershell
+# 插件：独立项目，独立构建
+cd lightcode-ai
+go build -o ..\lightcode\lightcode-ai.exe .   # Windows
+go build -o ../lightcode/lightcode-ai .       # macOS / Linux
+
+# 编辑器（同目录会找到插件）
+cd ..\lightcode
+go run ./cmd/lightcode
+```
+
+`go run` 的可执行文件在临时目录，找不到「同目录」的插件；从 `lightcode/`
+目录启动时走「当前目录」规则，或显式指定：
+
+```powershell
+$env:LIGHTCODE_AI_PLUGIN = "E:\codes\go_projects\ada_case\lightcode\lightcode-ai.exe"
+```
+
+插件支持 `lightcode-ai -version`。
+
+## 7. 测试（三块，各自独立）
+
+| 模块 | 测试 | 证明什么 |
+|---|---|---|
+| `ada_link` | `link/link_test.go` 等原有测试 | 并入后消息层与帧协议未退化；`link` 在管道上仍工作 |
+| `lightcode-ai` | `provider/provider_test.go` | SSE 流式、请求体、HTTP 错误、取消 |
+| | `serve/serve_test.go` | 管道上握手、流式增量与整段一致、取消、空 Key |
+| `lightcode` | `internal/aiplugin/client_test.go` | **真子进程**：拉起、增量/整段、取消、错误、被杀后换新、协议不符、启动即失败 |
+| | `internal/app/aiclient_test.go` | 发现规则、缺插件时的报错、能力面板文案 |
+| | `internal/app/ai_test.go`、`m4_screenshot_test.go` | 面板逻辑用注入的 runner 跑，不需要进程或网络 |
+
+`internal/aiplugin` 的测试用一个测试进程扮演插件（`LIGHTCODE_AI_PLUGIN_HELPER=serve`），
+它和真插件说同一份协议；真插件与编辑器的端到端则另外手动跑过：
+编辑器 pid 与插件 pid 不同、`status` 里能看到 `lightcode-ai v0.2.0`。
+
+## 8. 限制与后续
+
+- 真实模型仍未验证（没有可用的 Key），所有测试打的是本地 httptest 端点。
+- 一个编辑器会话共用一个插件进程；多窗口会串行共用，目前只有单窗口。
+- 插件跟系统代理只认 `HTTP(S)_PROXY` 环境变量：M4 时用的是 MyGo 的系统代理设置，
+  但那会让独立项目重新依赖 UI 框架，取舍见 §2；需要时可以把代理配置作为请求
+  字段传进来。
+- 没有插件清单/权限/签名：现在只信任「用户自己构建的那份」。
+- 没有随编辑器打包发布：`LIGHTCODE_AI_PLUGIN` 已留出入口，打包目标未做。

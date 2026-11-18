@@ -1,10 +1,15 @@
 package app
 
 import (
-	"errors"
+	"fmt"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
+
+	"lightcode.ai/client/protocol"
 
 	"lightcode/internal/aiplugin"
 )
@@ -16,9 +21,9 @@ func (a *App) aiClient() (*aiplugin.Client, error) {
 	if a.AI.client != nil {
 		return a.AI.client, nil
 	}
-	cmd := aiPluginCommand()
-	if len(cmd) == 0 {
-		return nil, errors.New("找不到 AI 插件进程：把 LIGHTCODE_AI_PLUGIN 指向插件可执行文件")
+	cmd, err := aiPluginCommand()
+	if err != nil {
+		return nil, err
 	}
 	c := aiplugin.New(aiplugin.Options{Command: cmd})
 	a.AI.client = c
@@ -47,7 +52,7 @@ func (a *App) RestartAI() {
 // without starting it.
 func (a *App) aiPluginStatus() aiplugin.Status {
 	if a.AI.client == nil {
-		return aiplugin.Status{Name: aiplugin.Name, Version: aiplugin.Version}
+		return aiplugin.Status{Name: protocol.Name, Version: protocol.Version}
 	}
 	return a.AI.client.Status()
 }
@@ -56,24 +61,57 @@ func (a *App) aiPluginStatus() aiplugin.Status {
 func aiPluginText(st aiplugin.Status) string {
 	switch {
 	case st.Running && st.PID > 0:
-		return "进程插件 · 运行中 · pid " + strconv.Itoa(st.PID)
+		version := st.Version
+		if version == "" {
+			version = "?"
+		}
+		return "进程插件 · 运行中 · " + st.Name + " v" + version + " · pid " + strconv.Itoa(st.PID)
 	case st.Err != "":
 		return "进程插件 · 上次退出：" + st.Err
 	default:
-		return "进程插件 · 按需启动（首次提问时拉起）"
+		return "进程插件 · 按需启动（首次提问时拉起独立进程）"
 	}
 }
 
-// aiPluginCommand is how the plugin process is reached: the app spawns
-// itself with a subcommand, so a build carries its plugin; LIGHTCODE_AI_PLUGIN
-// points at a separate executable instead, for a plugin built on its own.
-func aiPluginCommand() []string {
+// aiPluginName is the plugin's executable, which is its own project and
+// its own build, not a subcommand of the editor.
+func aiPluginName() string {
+	if runtime.GOOS == "windows" {
+		return "lightcode-ai.exe"
+	}
+	return "lightcode-ai"
+}
+
+// aiPluginCommand finds the plugin: LIGHTCODE_AI_PLUGIN first, then the
+// editor's own directory (where a build puts it), then the working
+// directory, then PATH. Since the plugin is a separate project, a missing
+// binary is an error with the command that builds it, not a silent
+// fallback into the editor.
+func aiPluginCommand() ([]string, error) {
 	if v := strings.TrimSpace(os.Getenv("LIGHTCODE_AI_PLUGIN")); v != "" {
-		return []string{v}
+		return []string{v}, nil
 	}
-	exe, err := os.Executable()
-	if err != nil {
-		return nil
+	name := aiPluginName()
+	if exe, err := os.Executable(); err == nil {
+		cand := filepath.Join(filepath.Dir(exe), name)
+		if isFile(cand) {
+			return []string{cand}, nil
+		}
 	}
-	return []string{exe, "ai-provider"}
+	if cwd, err := os.Getwd(); err == nil {
+		cand := filepath.Join(cwd, name)
+		if isFile(cand) {
+			return []string{cand}, nil
+		}
+	}
+	if found, err := exec.LookPath(name); err == nil {
+		return []string{found}, nil
+	}
+	return nil, fmt.Errorf("找不到 AI 插件 %s：先构建它（cd lightcode-ai && go build -o ../lightcode/%s .），或设置 LIGHTCODE_AI_PLUGIN", name, name)
+}
+
+// isFile reports whether path is an existing regular file.
+func isFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }

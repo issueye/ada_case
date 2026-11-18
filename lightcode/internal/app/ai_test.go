@@ -1,31 +1,16 @@
 package app
 
 import (
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
+	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/egoist/mygo/ui"
 
-	"lightcode/internal/aiplugin"
+	"lightcode.ai/client/protocol"
 )
-
-// aiServer streams reply as one delta, as an OpenAI-compatible endpoint
-// does in pieces.
-func aiServer(t *testing.T, reply string) *httptest.Server {
-	t.Helper()
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/event-stream")
-		payload, _ := json.Marshal(map[string]any{
-			"choices": []any{map[string]any{"delta": map[string]any{"content": reply}}},
-		})
-		w.Write([]byte("data: " + string(payload) + "\n\n"))
-		w.Write([]byte("data: [DONE]\n\n"))
-	}))
-}
 
 const aiDiffReply = "这次改动加了一行注释：\n```diff\n" +
 	"diff --git a/main.go b/main.go\n" +
@@ -37,19 +22,32 @@ const aiDiffReply = "这次改动加了一行注释：\n```diff\n" +
 	" \n" +
 	"```\n"
 
+// fakeRunner stands in for the plugin: it streams text the way the plugin's
+// deltas would, or fails, with no process and no endpoint. The client's
+// process path has its own tests in internal/aiplugin.
+func fakeRunner(text string, err error) aiRunner {
+	return func(_ context.Context, _ protocol.Config, _ []protocol.ChatMessage, onDelta func(string)) (string, error) {
+		if err != nil {
+			return "", err
+		}
+		if onDelta != nil && text != "" {
+			onDelta(text)
+		}
+		return text, nil
+	}
+}
+
 // TestAIStreamsAndAppliesDiff sends a question, reads the streamed answer
 // and applies the diff it produced, only after the user's click.
 func TestAIStreamsAndAppliesDiff(t *testing.T) {
 	a, dir := testWorkspace(t)
 	a.resetColumns()
 	a.OpenFile(filepath.Join(dir, "main.go"))
-	srv := aiServer(t, aiDiffReply)
-	defer srv.Close()
-	a.AI.Config = aiplugin.Config{BaseURL: srv.URL, Model: "test", APIKey: "k"}
+	a.AI.runner = fakeRunner(aiDiffReply, nil)
+	a.AI.Config = protocol.Config{Model: "test", APIKey: "k"}
 	a.AI.Draft = "加一行注释"
 	a.SendAI()
 	if a.AI.Streaming {
-		// No window: the call runs inline and is done already.
 		t.Fatalf("stream still running after a synchronous call")
 	}
 	if len(a.AI.Messages) < 2 {
@@ -98,12 +96,8 @@ func TestAINoKeyOpensSettings(t *testing.T) {
 // TestAIRetryResends resends the last question on a failure.
 func TestAIRetryResends(t *testing.T) {
 	a, _ := testWorkspace(t)
-	bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusUnauthorized)
-		w.Write([]byte(`{"error":{"message":"bad key"}}`))
-	}))
-	defer bad.Close()
-	a.AI.Config = aiplugin.Config{BaseURL: bad.URL, Model: "m", APIKey: "k"}
+	a.AI.runner = fakeRunner("", errors.New("bad key"))
+	a.AI.Config = protocol.Config{Model: "m", APIKey: "k"}
 	a.AI.Draft = "问一次"
 	a.SendAI()
 	last := a.AI.Messages[len(a.AI.Messages)-1]
@@ -116,6 +110,23 @@ func TestAIRetryResends(t *testing.T) {
 	}
 	if a.AI.Messages[len(a.AI.Messages)-1].Err == "" {
 		t.Errorf("the retry did not fail too")
+	}
+}
+
+// TestAIMissingPluginExplains names the missing binary and how to build it,
+// instead of falling back into the editor's own process.
+func TestAIMissingPluginExplains(t *testing.T) {
+	t.Setenv("LIGHTCODE_AI_PLUGIN", "")
+	a, _ := testWorkspace(t)
+	a.AI.Config.APIKey = "k"
+	a.AI.Draft = "hi"
+	a.AI.runner = nil
+	a.SendAI()
+	if !strings.Contains(a.AI.Err, "lightcode-ai") {
+		t.Fatalf("error = %q", a.AI.Err)
+	}
+	if a.AI.Streaming {
+		t.Errorf("a failed start left the panel streaming")
 	}
 }
 
