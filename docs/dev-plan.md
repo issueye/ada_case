@@ -309,7 +309,7 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-18 | AI 进程插件（初版） | `internal/aiplugin`（自写帧/Peer/宿主 Client）→ `plugins/aiprovider`（进程内 Serve）→ 窗口懒启动、`ai-provider` 自执行子命令 | 测试 117 个全绿；真机流式验证；截图 _shots/lightcode-ai-plugin.png |
 | 2026-11-18 | ada_link 并入 + AI 独立项目 | `ada_link/` 并入本仓库（含 `link` 的管道支持）；新建独立模块 `lightcode-ai/`（protocol/provider/serve + 自己的二进制）；编辑器只保留 `internal/aiplugin` 宿主侧；删除 `internal/ai`、`plugins/aiprovider` 与自执行子命令；发现规则 env → 同目录 → cwd → PATH | 三模块 `go build/vet/test` 全绿（编辑器 108 个、插件 9 个、link 原有）；真插件冒烟：编辑器 pid 19752 / 插件 pid 7976、`lightcode-ai v0.2.0` |
 | 2026-11-18 | LOGO（追加） | `docs/logo.svg` / `logo-light.svg`（512，`</>` 母题）、512/32 PNG、`lightcode/assets/icon.png`（256，`//go:embed` 进窗口 `SetIcon`） | 32px 可辨；SVG 与 PNG 逐像素一致（Chromium 栅格化）；`docs/ai-plugin.md` 记录设计 |
-| 2026-11-18 | AI 面板：界面进插件 | `lightcode-ai/assistant` 用 MyGo `ui` 画三种形态（标题头/对话/输入/diff 卡片/收起卡片）；`mygoembed.Serve` 离屏渲染 + `Attach` 合成；编辑器只给三处挂载矩形与文件/凭据服务；拖动走 `ai.move`/`ai.origin`；`Host.View` 去 AutoFocus | 编辑器 90 个 + 插件 11 个测试全绿；三张真机截图 `_shots/lightcode-ai-panel.png`、`-float.png`、`-rail.png`；`go list -deps` 仍单向 |
+| 2026-11-18 | AI 面板：界面进插件 | `lightcode-ai/assistant` 用 MyGo `ui` 画三种形态（标题头/对话/输入/diff 卡片/收起卡片）；`mygoembed.Serve` 离屏渲染 + `Attach` 合成；编辑器只给三处挂载矩形与文件/凭据服务；拖动走 `ai.move`/`ai.origin`；窗口控制（设置/停靠-悬浮/收起/关闭）与悬浮拖动改由编辑器画在标题栏上，面板只画标题与内容；`Host.View` 去 AutoFocus | 编辑器 90 个 + 插件 11 个测试全绿；三张真机截图 `_shots/lightcode-ai-panel.png`、`-float.png`、`-rail.png`；`go list -deps` 仍单向 |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
 
 

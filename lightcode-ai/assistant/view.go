@@ -43,11 +43,10 @@ func (s *State) header(c *ui.Context) {
 	ui.Row(c).Height(theme.HeaderH).Background(theme.PanelDeep).PaddingX(8).Gap(6).
 		AlignItems(ui.Center).BorderWidth(0, 0, 1, 0).BorderColor(theme.BorderSoft).
 		Children(func() {
-			grip := ui.Row(c).Width(150).Shrink(0).Gap(6).AlignItems(ui.Center)
-			if s.mode != ModeDock {
-				grip.Cursor(ui.CursorGrab).Tooltip("拖动标题移动 AI 面板").
-					HandleInput(s.dragHandler(s.mode))
-			}
+			// The editor owns the window controls (settings, mode switch,
+			// minimize, close) and draws them over this bar; the panel owns
+			// the title.
+			grip := ui.Row(c).Gap(6).AlignItems(ui.Center)
 			grip.Children(func() {
 				ui.Icon(c, icons.Sparkles).FontSize(15).TextColor(theme.AI)
 				ui.Text(c, "AI 助手").FontSize(11).Bold().TextColor(theme.Text)
@@ -57,29 +56,6 @@ func (s *State) header(c *ui.Context) {
 				}
 			})
 			ui.Box(c).Grow(1)
-			modes := []struct {
-				icon  *ui.SVG
-				label string
-			}{
-				{icons.PanelLeft, "停靠"},
-				{icons.Split, "悬浮"},
-				{icons.PanelRight, "收起"},
-			}
-			for i, m := range modes {
-				color := theme.Muted
-				if s.mode == i {
-					color = theme.Accent
-				}
-				btn := ui.ButtonBase(c).Size(24, 22).Radius(4).Label(m.label).Tooltip(m.label)
-				btn.Children(func() { ui.Icon(c, m.icon).FontSize(13).TextColor(color) })
-				if s.mode == i {
-					btn.Background(theme.AccentSoft)
-				}
-				mode := i
-				btn.OnClick(func() { s.Bridge.SetMode(mode) })
-			}
-			iconButton(c, icons.Settings, "AI 设置", s.Bridge.Settings)
-			iconButton(c, icons.Close, "收起 AI 面板", func() { s.Bridge.SetMode(ModeRail) })
 		})
 }
 
@@ -310,16 +286,6 @@ func (s *State) dragHandler(target int) func(ui.InputEvent) bool {
 			return true
 		}
 		return false
-	}
-}
-
-// iconButton is a small square button with one icon.
-func iconButton(c *ui.Context, ic *ui.SVG, label string, fn func()) {
-	btn := ui.ButtonBase(c).Size(22, 22).Radius(4).Label(label).Tooltip(label)
-	btn.Children(func() { ui.Icon(c, ic).FontSize(13).TextColor(theme.Muted) })
-	btn.OnClick(fn)
-	if btn.Hovered() {
-		btn.Background(theme.Hover)
 	}
 }
 

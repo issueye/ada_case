@@ -61,10 +61,10 @@ ada_case/
 | `editor.context` | 面板 → 编辑器 | `Context{messages}` | 系统提示 + 当前文件/选区（≤8000 字符） |
 | `editor.answer` | 面板 → 编辑器 | `AnswerRequest{requestID, text}` → `AnswerResult{cards}` | 编辑器解析 diff、读文件，回卡片（旧文/新文） |
 | `editor.apply` | 面板 → 编辑器 | `ApplyRequest{requestID, index}` → `ApplyResult{err}` | 把某张卡片写进文件（对当前缓冲区重新应用） |
-| `editor.setMode` | 面板 → 编辑器 | `ModeRequest{mode}` | 换挂载点 |
+| `editor.setMode` | 面板 → 编辑器 | `ModeRequest{mode}` | 换挂载点（收起卡片上的「展开」仍由面板发起） |
 | `ai.settings` | 面板 → 编辑器 | — | 打开编辑器里的端点/Key 弹窗 |
-| `ai.move` | 面板 → 编辑器 | `MoveRequest{target, x, y}` | 拖动悬浮/收起卡片 |
-| `ai.origin` | 编辑器 → 面板 | `Origin{x, y}` | 挂载点当前位置 |
+| `ai.move` | 面板 → 编辑器 | `MoveRequest{target, x, y}` | 收起卡片被拖动时告诉编辑器 |
+| `ai.origin` | 编辑器 → 面板 | `Origin{x, y}` | 挂载点当前位置（拖动换算用） |
 
 对话、输入、打字机、diff 卡片、错误与重试都在面板进程里；编辑器只保留
 **Key 与文件操作**——Key 存在系统凭据库，只随 `ai.configure` 进面板内存。

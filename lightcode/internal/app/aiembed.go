@@ -39,6 +39,11 @@ type aiEdge struct {
 	answers map[string][]aiAnswerCard
 	// dirty asks the next frame to push the configuration to the panel.
 	dirty bool
+	// rect is where the panel last drew, for the window controls the editor
+	// lays over its title bar.
+	rect ui.Rect
+	// drag is a pointer drag of the floating mount by the editor's title bar.
+	drag aiMountDrag
 }
 
 // aiAnswerCard is one file's patch of an answer, kept so a later click can
@@ -46,6 +51,15 @@ type aiEdge struct {
 type aiAnswerCard struct {
 	path  string
 	patch editor.FilePatch
+}
+
+// aiMountDrag tracks the pointer dragging a floating mount by the title bar
+// the editor draws over the panel.
+type aiMountDrag struct {
+	active bool
+	// grabX and grabY are where the pointer took hold of the mount, from its
+	// top left.
+	grabX, grabY float32
 }
 
 // aiMountDock is the panel's place in the layout: a column at the right.
@@ -105,7 +119,8 @@ func (a *App) aiMount(c *ui.Context) {
 	if e.dirty {
 		a.pushAIConfig()
 	}
-	ui.Box(c).Grow(1).Children(func() { h.View(c) })
+	ui.Box(c).Grow(1).Draw(func(_ *ui.Painter, r ui.Rect) { a.AIEdge.rect = r }).
+		Children(func() { h.View(c) })
 }
 
 // aiMountError shows why the panel is missing, and the way back: the plugin
@@ -405,6 +420,90 @@ func (a *App) aiPosition(target int) (float32, float32) {
 		a.Prefs.AIFloatX, a.Prefs.AIFloatY = x, y
 	}
 	return x, y
+}
+
+// aiChrome draws the window controls the editor owns: settings, the mount
+// switch, minimize and close. The panel draws its title and content; the
+// editor draws the window around them.
+func (a *App) aiChrome(c *ui.Context) {
+	e := &a.AIEdge
+	if a.AI.Mode == AIRail || e.rect.W < 60 || e.rect.H < 30 {
+		return
+	}
+	right := e.rect.X + e.rect.W - 4*22 - 12
+	ui.Overlay(c, func() {
+		if a.AI.Mode == AIFloat {
+			drag := ui.Box(c).Absolute().Left(e.rect.X + 8).Top(e.rect.Y).
+				Width(e.rect.W - 120).Height(36).Cursor(ui.CursorGrab).
+				Tooltip("拖动标题移动 AI 面板")
+			drag.HandleInput(a.dragAIMount())
+		}
+		row := ui.Row(c).Absolute().Left(right).Top(e.rect.Y + 7).Height(22).Gap(2)
+		row.Children(func() {
+			a.aiChromeButton(c, icons.Settings, "AI 设置", a.OpenAISettings)
+			if a.AI.Mode == AIDock {
+				a.aiChromeButton(c, icons.Split, "悬浮", func() { a.SetAIMode(AIFloat) })
+			} else {
+				a.aiChromeButton(c, icons.PanelLeft, "停靠", func() { a.SetAIMode(AIDock) })
+			}
+			a.aiChromeButton(c, icons.PanelRight, "收起", func() { a.SetAIMode(AIRail) })
+			a.aiChromeButton(c, icons.Close, "关闭 AI 面板", a.HideAI)
+		})
+	})
+}
+
+// aiChromeButton is one of the title bar's small buttons.
+func (a *App) aiChromeButton(c *ui.Context, ic *ui.SVG, label string, fn func()) {
+	btn := ui.ButtonBase(c).Size(20, 20).Radius(4).Label(label).Tooltip(label)
+	btn.Children(func() { ui.Icon(c, ic).FontSize(12).TextColor(theme.Muted) })
+	btn.OnClick(fn)
+	if btn.Hovered() {
+		btn.Background(theme.Hover)
+	}
+}
+
+// HideAI closes the panel: the mount goes away, and the view command that
+// toggles it brings it back.
+func (a *App) HideAI() {
+	a.Prefs.AIEnabled = false
+	savePrefs(a.Prefs)
+	a.SaveState()
+	a.say("AI 面板已关闭；视图 → 切换 AI 面板 可重新打开")
+}
+
+// dragAIMount drags a floating mount by the title bar the editor draws. The
+// pointer's window position is the mount's drawn rect plus the local one, so
+// it stays the same while the mount follows the pointer.
+func (a *App) dragAIMount() func(ui.InputEvent) bool {
+	return func(ev ui.InputEvent) bool {
+		st := &a.AIEdge.drag
+		r := a.AIEdge.rect
+		switch ev.Kind {
+		case ui.InputPointerDown:
+			if ev.Button != 0 {
+				return false
+			}
+			st.active = true
+			st.grabX = r.X + ev.X - a.Prefs.AIFloatX
+			st.grabY = r.Y + ev.Y - a.Prefs.AIFloatY
+			return true
+		case ui.InputPointerMove:
+			if !st.active {
+				return false
+			}
+			a.Prefs.AIFloatX, a.Prefs.AIFloatY = a.clampAI(r.X+ev.X-st.grabX, r.Y+ev.Y-st.grabY, aiFloatW, aiFloatH)
+			a.AIEdge.dirty = true
+			return true
+		case ui.InputPointerUp:
+			if !st.active {
+				return false
+			}
+			st.active = false
+			savePrefs(a.Prefs)
+			return true
+		}
+		return false
+	}
 }
 
 // clampAI keeps a mount inside the window.

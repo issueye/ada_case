@@ -161,22 +161,6 @@ func TestDragMovesTheMount(t *testing.T) {
 	}
 }
 
-// TestModeButtonsAskTheEditor clicks the rail and dock buttons: the panel
-// asks the editor for the mount instead of moving itself.
-func TestModeButtonsAskTheEditor(t *testing.T) {
-	b := &fakeBridge{}
-	s := configured(t, b, ModeDock, "http://127.0.0.1:1/v1")
-	tt := ui.NewTester(s.View, 380, 640)
-	tt.Frame()
-	if err := tt.Click("悬浮"); err != nil {
-		t.Fatal(err)
-	}
-	tt.Frame()
-	if len(b.modes) == 0 || b.modes[len(b.modes)-1] != ModeFloat {
-		t.Fatalf("modes = %v", b.modes)
-	}
-}
-
 // TestNoKeyOpensSettings asks the editor for the key instead of failing.
 func TestNoKeyOpensSettings(t *testing.T) {
 	b := &fakeBridge{}

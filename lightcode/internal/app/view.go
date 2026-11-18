@@ -50,6 +50,7 @@ func (a *App) View(c *ui.Context) {
 	if a.Prefs.AIEnabled {
 		a.aiMountFloat(c)
 		a.aiMountRail(c)
+		a.aiChrome(c)
 	}
 	a.aiSettingsOverlay(c)
 }

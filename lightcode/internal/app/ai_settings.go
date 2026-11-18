@@ -68,8 +68,15 @@ func (a *App) SetAIMode(mode int) {
 	a.SaveState()
 }
 
-// ToggleAI collapses the docked panel to the rail, or brings it back.
+// ToggleAI shows the panel, or collapses it: the command that brings back
+// one the close button hid.
 func (a *App) ToggleAI() {
+	if !a.Prefs.AIEnabled {
+		a.Prefs.AIEnabled = true
+		savePrefs(a.Prefs)
+		a.SetAIMode(AIDock)
+		return
+	}
 	if a.AI.Mode == AIRail {
 		a.SetAIMode(AIDock)
 		return
