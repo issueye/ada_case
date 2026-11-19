@@ -63,6 +63,7 @@ func (a *App) openDiff(path string, staged bool) {
 		ContextLines: 3,
 		Inline:       editor.DiffInlineWordAlt,
 		SplitPercent: 45,
+		PopoverMenu:  true,
 	}
 	a.Diff = &diffTab{Path: path, Staged: staged, Old: oldBuf, New: newBuf, State: state, Hunks: fp.Hunks}
 }
@@ -104,7 +105,11 @@ func (a *App) diffView(c *ui.Context) {
 		if !d.Staged && len(d.Hunks) > 0 {
 			a.diffHunkBar(c, d)
 		}
-		editor.DiffView(c, d.State).Grow(1).FillWidth()
+		// As the code area, the diff's sides build in the app menus'
+		// metrics, so their context menus read like the app's.
+		ui.Themed(c, theme.Menu()).Grow(1).FillWidth().Children(func() {
+			editor.DiffView(c, d.State).Grow(1).FillWidth()
+		})
 	})
 }
 

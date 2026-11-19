@@ -18,8 +18,10 @@ func (a *App) applyPrefs() {
 			e.State.SoftWrap = a.Prefs.SoftWrap
 		}
 	}
-	if a.Term != nil {
-		a.Term.SetFont(terminal.Font{Family: theme.MonoFont, Size: a.Prefs.TerminalFontSize})
+	for _, c := range a.Terms {
+		if c.term != nil {
+			c.term.SetFont(terminal.Font{Family: theme.MonoFont, Size: a.Prefs.TerminalFontSize})
+		}
 	}
 }
 
@@ -75,6 +77,7 @@ func (a *App) settingsPage(c *ui.Context) {
 						a.Prefs.TerminalEnabled = term
 						if !term {
 							a.TermOpen = false
+							a.CloseTerminal()
 						}
 						savePrefs(a.Prefs)
 					}
@@ -130,8 +133,11 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 					ui.Column(c).Grow(1).Children(func() {
 						ui.Text(c, "终端").FontSize(11).TextColor(theme.Text)
 						status := "libghostty-vt"
-						if a.TermErr != "" {
-							status = "不可用：" + a.TermErr
+						for _, c := range a.Terms {
+							if c.err != "" {
+								status = "不可用：" + c.err
+								break
+							}
 						}
 						ui.Text(c, status).FontSize(9).TextColor(theme.Faint).SingleLine()
 					})
@@ -140,6 +146,7 @@ func (a *App) capabilitiesPanel(c *ui.Context) {
 						a.Prefs.TerminalEnabled = term
 						if !term {
 							a.TermOpen = false
+							a.CloseTerminal()
 						}
 						savePrefs(a.Prefs)
 					}

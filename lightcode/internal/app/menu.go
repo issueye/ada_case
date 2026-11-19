@@ -34,12 +34,23 @@ type rowMenu struct {
 	isDir   bool
 }
 
+// menuPopup shows items below anchor while *open is true. It builds the
+// panel with PopoverBase, not Popover: the theme's popover look would put
+// its own background, border, padding and shadow behind the menu card and
+// read as a second, larger background around it in the light palette.
+func (a *App) menuPopup(c *ui.Context, anchor ui.Element, open *bool, items []menuItem, closeMenu func()) {
+	ui.PopoverBase(c, anchor, open, func(panel ui.Element) {
+		panel.Margin(4, 0, 0, 0)
+		a.menuBody(c, items, closeMenu)
+	})
+}
+
 // menuBody draws a context menu in the app's own style: the same width,
 // row height and type as the tab menu, so every right click in the window
 // looks alike. closeMenu shuts the menu the items belong to.
 func (a *App) menuBody(c *ui.Context, items []menuItem, closeMenu func()) {
 	ui.Column(c).Width(216).PaddingY(4).Radius(6).Background(theme.Panel).
-		Border(1, theme.Border).Shadow(0, 8, 24, 0, ui.RGBA(0, 0, 0, 0.45)).
+		Border(1, theme.Border).Shadow(0, 4, 12, 0, ui.RGBA(0, 0, 0, 0.20)).
 		Children(func() {
 			for _, it := range items {
 				if it.sep {

@@ -315,6 +315,10 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-18 | 图片预览 | PNG/JPEG/GIF/WebP/BMP/SVG 以只读标签预览（`ui.Image` 自适应窗口、显示格式与尺寸），SVG 无法绘制时退回源码文本；状态栏显示图片格式与尺寸 | `document` 与 `app` 新增图片测试；`go build/vet/test` 全绿 |
 | 2026-11-18 | 右键菜单统一 | 资源管理器与源代码管理的右键菜单改用应用内主题绘制（与标签菜单同一个 216 宽 / 28 高组件），不再弹出系统白菜单；新增资源管理器与 SCM 菜单测试 | `go build/vet/test` 全绿 |
 | 2026-11-18 | Markdown 文档视图 | `.md` 等文件可在源码与渲染文档之间切换（`Ctrl+Shift+V`、视图菜单、面包屑按钮）；文档视图用 `ui/markdown` 渲染，可滚动、可选中；新增切换测试 | `go build/vet/test` 全绿 |
+| 2026-11-19 | UI 修正 | 右键菜单去掉多余背景：标签/资源管理器/SCM 菜单改用 `ui.PopoverBase` 自绘面板，不再叠一层主题弹层（白底 + 边框 + 重阴影，浅色主题下像菜单外多出一圈灰底）；菜单自身阴影改为轻投影 | `go build/vet/test` 全绿；截图 `_shots/lightcode-ui-tabmenu.png`（深色）与 `_shots/lightcode-ui-tabmenu-light.png`（浅色） |
+| 2026-11-19 | UI 修正 | 侧栏图标补全：`NewFile` 原来只画了纸张右上角与加号，缩到 16px 像断开的残片，改为完整纸张 + 加号；`Refresh` 的弧线断开、箭头只剩一小段，改为完整圆箭头（资源管理器与 SCM 共用） | `go build/vet/test` 全绿；`_shots/*` 与 `testdata/shots/editor.png` 基线重新生成 |
+| 2026-11-19 | 终端多控制台 | 底部终端改为标签式：`+`（`Ctrl+Shift+``）新建、每个标签一个独立 shell（终端 1、2…）、标签单独关闭、关掉最后一个收起面板、新建或切标签后焦点进终端；`Ctrl+`` 开关与 `path:line:col` 链接保留，能力面板关掉终端时结束所有 shell | `go build/vet/test` 全绿；新增 `TestTerminalTabs`，`TestTerminalPaneFailure` 适配 |
+| 2026-11-19 | 代码区右键菜单 | 编辑器右键菜单不再交给系统：mygo 编辑器新增 `State.PopoverMenu` / `DiffState.PopoverMenu`，由 `ui.PopoverMenu` 在窗口内按主题绘制（剪切/复制/粘贴/全选/切换注释/选择/转换/折叠 与子菜单都保留）；应用声明中文语言（`locales/zh-Hans` + `SetLanguages`），编辑器在 `theme.Menu()`（11px、面板半径 6）下构建，字号行距与标签/资源管理器菜单一致 | lightcode `go build/vet/test` 全绿；mygo `ui` 与 `ui/editor` 测试全绿；新增 `TestEditorContextMenu`、mygo `TestPopoverContextMenu`；截图 `_shots/lightcode-ui-editor-menu.png` |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
 
 

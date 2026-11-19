@@ -22,8 +22,6 @@ import (
 	"lightcode/internal/symbols"
 	"lightcode/internal/theme"
 	"lightcode/internal/workspace"
-
-	"github.com/egoist/mygo/plugins/terminal"
 )
 
 // PaletteMode is what the palette lists.
@@ -83,12 +81,16 @@ type App struct {
 	GitErr string
 	GitLog []git.LogEntry
 	Diff   *diffTab
-	// Term is the bottom terminal, its error, whether the pane shows,
-	// and the share of the height it takes.
-	Term        *terminal.Terminal
-	TermErr     string
+	// Terms are the bottom pane's consoles and TermActive the one shown;
+	// TermOpen tells whether the pane shows and TermPercent the share of
+	// the height it takes. termSeq numbers the consoles, termFocus asks
+	// the one built next to take the keyboard.
+	Terms       []*console
+	TermActive  int
 	TermOpen    bool
 	TermPercent float32
+	termSeq     int
+	termFocus   bool
 	// SettingsOpen shows the settings page in the active column.
 	SettingsOpen bool
 	// viewW and viewH are the window's content size, for dragging overlays.
@@ -206,6 +208,8 @@ func (a *App) registerCommands() {
 	add("view.split", "拆分 / 关闭编辑器", "视图", "CmdOrCtrl+\\", a.ToggleSplit)
 	add("view.markdown", "Markdown 文档视图", "视图", "CmdOrCtrl+Shift+V", a.ToggleMarkdownPreview)
 	add("terminal.toggle", "终端", "视图", "CmdOrCtrl+`", a.toggleTerminal)
+	add("terminal.new", "新建终端", "视图", "CmdOrCtrl+Shift+`", a.newTerminal)
+	add("terminal.close", "关闭当前终端", "视图", "", a.closeActiveConsole)
 	add("view.settings", "设置", "文件", "", func() { a.SettingsOpen = true })
 	add("view.toggleTheme", "切换明暗主题", "视图", "CmdOrCtrl+Shift+T", a.ToggleTheme)
 	add("palette.files", "快速打开…", "转到", "CmdOrCtrl+P", func() { a.OpenPalette(PaletteFiles) })

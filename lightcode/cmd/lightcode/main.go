@@ -12,6 +12,10 @@ import (
 	"github.com/egoist/mygo"
 	"github.com/egoist/mygo/ui"
 
+	// MyGo's own texts, as the editor's menu, in Chinese: the app is
+	// written in it.
+	_ "github.com/egoist/mygo/locales/zh-Hans"
+
 	"lightcode/assets"
 	"lightcode/internal/app"
 	"lightcode/internal/theme"
@@ -25,6 +29,9 @@ func main() {
 	if len(os.Args) > 2 {
 		file = os.Args[2]
 	}
+	// 轻码 is written in Chinese: MyGo's controls and menus say their
+	// texts in it whatever the system's language.
+	mygo.App.SetLanguages("zh-Hans")
 	mygo.App.WhenReady(func() {
 		mygo.Theme.SetSource(mygo.ThemeDark)
 		a := app.New(root, file)

@@ -161,6 +161,18 @@ func Window() *ui.Theme {
 }
 
 // Code returns the editor theme for the current palette.
+// Menu is the window's theme with the metrics of the app's own context
+// menus: 11px text, and a panel MyGo draws two radii wider than the
+// window's, as the app's menus are 6. Parts MyGo draws in the window, as
+// a code editor's context menu, build in it to look like the menus the
+// app draws itself.
+func Menu() *ui.Theme {
+	t := Window()
+	t.FontSize = 11
+	t.Radius = 4
+	return t
+}
+
 func Code(t *ui.Theme) *editor.Theme {
 	ct := editor.DefaultTheme(t)
 	if light {

@@ -212,9 +212,7 @@ func (a *App) scmEntryRow(c *ui.Context, e git.Entry, kind string) {
 		a.rowMenu = rowMenu{open: true, kind: menuSCM, path: e.Path, scmKind: kind}
 	}
 	if a.rowMenu.open && a.rowMenu.kind == menuSCM && a.rowMenu.path == e.Path && a.rowMenu.scmKind == kind {
-		ui.Popover(c, row, &a.rowMenu.open, func() {
-			a.menuBody(c, a.scmMenuItems(e, kind), func() { a.rowMenu.open = false })
-		})
+		a.menuPopup(c, row, &a.rowMenu.open, a.scmMenuItems(e, kind), func() { a.rowMenu.open = false })
 	}
 }
 

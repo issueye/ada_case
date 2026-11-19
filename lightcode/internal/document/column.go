@@ -32,6 +32,9 @@ func NewEditor(d *Document) *Editor {
 			Font:     theme.EditorFont(),
 			Theme:    theme.Code(theme.Window()),
 			Label:    d.Name(),
+			// The code area's menu is the app's own: drawn in the window
+			// with the palette, in Chinese, as the other context menus.
+			PopoverMenu: true,
 		},
 		previewVersion: d.Buffer.Version(),
 	}

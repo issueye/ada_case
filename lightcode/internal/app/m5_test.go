@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	_ "github.com/egoist/mygo/locales/zh-Hans"
 	"github.com/egoist/mygo/ui"
 
 	"lightcode/internal/theme"
@@ -68,10 +69,71 @@ func TestTerminalPaneFailure(t *testing.T) {
 	a, _ := testWorkspace(t)
 	a.Prefs.TerminalEnabled = true
 	a.TermOpen = true
-	a.TermErr = "libghostty-vt: not found"
+	a.Terms = []*console{{number: 1, err: "libghostty-vt: not found"}}
 	tt := ui.NewTester(a.View, 1280, 820)
 	if !tt.HasText("终端无法启动") || !tt.HasText("libghostty-vt 由 mygo build") {
 		t.Fatalf("terminal error pane is missing; texts %q", tt.Texts())
+	}
+	if !tt.HasText("终端 1") {
+		t.Errorf("the failed console has no tab; texts %q", tt.Texts())
+	}
+}
+
+// TestTerminalTabs keeps a tab per console: the + adds one, a tab chooses
+// its console, and closing the last console closes the pane.
+func TestTerminalTabs(t *testing.T) {
+	a, _ := testWorkspace(t)
+	a.Prefs.TerminalEnabled = true
+	// No folder, so no shell starts: the tabs and their console numbers
+	// are what the test sees.
+	a.WS = nil
+	a.TermOpen = true
+	a.Terms = []*console{{number: 1}, {number: 2}}
+	a.termSeq = 2
+	a.TermActive = 0
+	tt := ui.NewTester(a.View, 1280, 820)
+	for _, want := range []string{"终端 1", "终端 2"} {
+		if !tt.HasText(want) {
+			t.Fatalf("console tab %q is missing; texts %q", want, tt.Texts())
+		}
+	}
+	if err := tt.Click("新建终端"); err != nil {
+		t.Fatal(err)
+	}
+	if len(a.Terms) != 3 || a.TermActive != 2 || a.Terms[2].number != 3 {
+		t.Fatalf("the new console: %d consoles, active %d, number %d", len(a.Terms), a.TermActive, a.Terms[2].number)
+	}
+	tt.Frame()
+	if !tt.HasText("终端 3") {
+		t.Fatalf("the new console has no tab; texts %q", tt.Texts())
+	}
+	if err := tt.Click("终端 2"); err != nil {
+		t.Fatal(err)
+	}
+	if a.TermActive != 1 {
+		t.Errorf("tabs chose console %d, want 1", a.TermActive)
+	}
+	// Closing another tab's console leaves the chosen one alone.
+	if err := tt.Click("终端 1"); err != nil {
+		t.Fatal(err)
+	}
+	if a.TermActive != 0 {
+		t.Fatalf("tabs chose console %d, want 0", a.TermActive)
+	}
+	if err := tt.Click("关闭终端 2"); err != nil {
+		t.Fatal(err)
+	}
+	if len(a.Terms) != 2 || a.Terms[0].number != 1 || a.Terms[1].number != 3 {
+		t.Fatalf("closing console 2 left %d consoles", len(a.Terms))
+	}
+	if a.TermActive != 0 || a.Terms[0].number != 1 {
+		t.Errorf("closing console 2 chose console %d", a.TermActive)
+	}
+	for len(a.Terms) > 0 {
+		a.closeConsole(len(a.Terms) - 1)
+	}
+	if a.TermOpen {
+		t.Errorf("the pane stayed open with no console left")
 	}
 }
 
@@ -160,6 +222,30 @@ func TestTabContextMenu(t *testing.T) {
 		if !tt.HasText(want) {
 			t.Errorf("themed tab menu misses %q; texts %q", want, tt.Texts())
 		}
+	}
+}
+
+// TestEditorContextMenu right-clicks the code area: its menu is the app's
+// own too, drawn in the window in Chinese, as the other menus, rather
+// than the system showing an English white one.
+func TestEditorContextMenu(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.resetColumns()
+	a.OpenFile(filepath.Join(dir, "main.go"))
+	tt := ui.NewTester(a.View, 1280, 820)
+	tt.SetLocale("zh-Hans")
+	tt.RightClickAt(600, 300)
+	tt.Frame()
+	for _, want := range []string{"剪切", "复制", "粘贴", "全选", "切换注释", "选择", "转换", "折叠"} {
+		if !tt.HasText(want) {
+			t.Fatalf("the editor menu misses %q; texts %q", want, tt.Texts())
+		}
+	}
+	if tt.HasText("Cut") || tt.HasText("Select All") {
+		t.Errorf("the editor menu still shows the system's texts: %q", tt.Texts())
+	}
+	if err := tt.Click("复制"); err != nil {
+		t.Fatal(err)
 	}
 }
 

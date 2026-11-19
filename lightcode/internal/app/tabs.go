@@ -88,9 +88,7 @@ func (a *App) tab(c *ui.Context, idx, i int, e *document.Editor, chosen bool) {
 		a.tabMenu = tabMenuState{open: true, idx: idx, doc: e.Doc}
 	}
 	if a.tabMenu.open && a.tabMenu.idx == idx && a.tabMenu.doc == e.Doc {
-		ui.Popover(c, tab, &a.tabMenu.open, func() {
-			a.tabMenuBody(c, idx, e.Doc)
-		})
+		a.tabMenuBody(c, tab, idx, e.Doc)
 	}
 }
 
@@ -198,7 +196,11 @@ func (a *App) breadcrumbsFor(d *document.Document) []string {
 
 // editorView shows the active editor.
 func editorView(c *ui.Context, e *document.Editor) {
-	editor.View(c, e.State).Grow(1).FillWidth()
+	// The editor builds in the app menus' metrics, so the context menu
+	// MyGo draws for it reads like the app's own menus.
+	ui.Themed(c, theme.Menu()).Grow(1).FillWidth().Children(func() {
+		editor.View(c, e.State).Grow(1).FillWidth()
+	})
 }
 
 // emptyColumn is the page shown with no open file in a column.
@@ -241,10 +243,10 @@ type tabMenuState struct {
 	doc  *document.Document
 }
 
-// tabMenuBody draws the tab's menu in the app's own style, in a popover
+// tabMenuBody draws the tab's menu in the app's own style, in a panel
 // under the tab, rather than the system's white menu.
-func (a *App) tabMenuBody(c *ui.Context, idx int, d *document.Document) {
-	a.menuBody(c, []menuItem{
+func (a *App) tabMenuBody(c *ui.Context, anchor ui.Element, idx int, d *document.Document) {
+	a.menuPopup(c, anchor, &a.tabMenu.open, []menuItem{
 		{label: "关闭", hint: "Ctrl+W", run: func() { a.closeTabIn(idx, d) }},
 		{label: "关闭其他", run: func() { a.closeOthersIn(idx, d) }},
 		{label: "关闭已保存", run: func() { a.closeSavedIn(idx) }},
