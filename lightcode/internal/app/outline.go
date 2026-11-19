@@ -63,10 +63,19 @@ func (a *App) outlinePanel(c *ui.Context) {
 		if len(syms) > maxRows {
 			syms = syms[:maxRows]
 		}
+		// Another file's tab shows now, this one opened, or its tab was
+		// double clicked: bring the unit at the caret into view, as the
+		// list may be long and still scrolled where the last file left it.
+		reveal := a.outline.reveal || a.outline.doc != e.Doc
+		a.outline.reveal = false
+		a.outline.doc = e.Doc
 		ui.Scroll(c).Grow(1).Children(func() {
 			ui.Column(c).Children(func() {
 				for i, s := range syms {
-					a.outlineRow(c, s, i == current)
+					row := a.outlineRow(c, s, i == current)
+					if reveal && i == current {
+						row.ScrollIntoView()
+					}
 				}
 				if len(all) > maxRows {
 					ui.Text(c, "还有 "+itoa(len(all)-maxRows)+" 个符号未列出").
@@ -80,7 +89,7 @@ func (a *App) outlinePanel(c *ui.Context) {
 	}
 }
 
-func (a *App) outlineRow(c *ui.Context, s symbols.Symbol, active bool) {
+func (a *App) outlineRow(c *ui.Context, s symbols.Symbol, active bool) ui.Element {
 	row := ui.Row(c).Height(22).PaddingX(8).Gap(5).AlignItems(ui.Center).
 		Cursor(ui.CursorPointer).Tooltip(s.Kind + " " + s.Name)
 	row.Children(func() {
@@ -104,6 +113,7 @@ func (a *App) outlineRow(c *ui.Context, s symbols.Symbol, active bool) {
 			e.State.ScrollTo(line)
 		}
 	})
+	return row
 }
 
 // cToEditorPos turns a symbol's position into an editor position.

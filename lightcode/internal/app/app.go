@@ -118,6 +118,11 @@ type App struct {
 		path    string
 		version uint64
 		syms    []symbols.Symbol
+		// doc is the file the panel last showed, so that another one's
+		// tab brings its unit at the caret into view; reveal asks for the
+		// same of the file it shows, as a double click on its tab does.
+		doc    *document.Document
+		reveal bool
 	}
 	// StatePath is where the session is kept; Zoom is the content's zoom.
 	StatePath string

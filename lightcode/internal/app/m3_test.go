@@ -65,6 +65,9 @@ func testGitWorkspace(t *testing.T) (*App, string) {
 		t.Fatal(err)
 	}
 	t.Setenv("LIGHTCODE_STATE", filepath.Join(dir, "state.json"))
+	// The settings are the test's too: the screenshots come out the same
+	// on every machine, whatever the developer's theme is.
+	t.Setenv("LIGHTCODE_SETTINGS", filepath.Join(dir, "settings.json"))
 	return New(dir, ""), dir
 }
 
@@ -118,6 +121,48 @@ func hunkCount(d *diffTab) int {
 		return 0
 	}
 	return len(d.Hunks)
+}
+
+// TestDiffFloats: the diff shows in a floating window over the editor,
+// which keeps its file, and the window closes by its button, Escape or a
+// click outside it.
+func TestDiffFloats(t *testing.T) {
+	a, dir := testGitWorkspace(t)
+	a.resetColumns()
+	a.OpenFile(filepath.Join(dir, "main.go"))
+	a.ShowSidebar(2)
+	a.openDiff("main.go", false)
+	tt := ui.NewTester(a.View, 1280, 820)
+	if !tt.HasText("暂存全部") || !tt.HasText("块 1") {
+		t.Fatalf("the floating diff misses its bars; texts %q", tt.Texts())
+	}
+	// The editor behind keeps the file it showed.
+	if e := a.Col().Current(); e == nil || e.Doc.Name() != "main.go" {
+		t.Fatalf("the editor behind shows %v", e)
+	}
+	if err := tt.Click("关闭差异"); err != nil {
+		t.Fatal(err)
+	}
+	tt.Frame()
+	if a.Diff != nil {
+		t.Errorf("the window stayed open after its close button")
+	}
+
+	a.openDiff("main.go", false)
+	tt.Frame()
+	tt.Key(0, ui.KeyEscape)
+	tt.Frame()
+	if a.Diff != nil {
+		t.Errorf("Escape did not close the window")
+	}
+
+	a.openDiff("main.go", false)
+	tt.Frame()
+	tt.ClickAt(20, 500) // the backdrop, left of the panel
+	tt.Frame()
+	if a.Diff != nil {
+		t.Errorf("a click outside did not close the window")
+	}
 }
 
 func TestCommitThroughPanel(t *testing.T) {

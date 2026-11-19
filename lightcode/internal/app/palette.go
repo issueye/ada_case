@@ -227,28 +227,23 @@ func (a *App) closeConfirmOverlay(c *ui.Context) {
 		return
 	}
 	d := a.CloseDoc
-	ui.Modal(c, &a.ClosePrompt, func() {
-		ui.Column(c).Width(420).Gap(10).Padding(18).Radius(8).
-			Background(theme.Panel).Border(1, theme.Border).
-			Shadow(0, 14, 36, 0, ui.RGBA(0, 0, 0, 0.55)).
-			Children(func() {
-				ui.Text(c, "是否保存对 "+d.Name()+" 的更改？").FontSize(14).Bold().TextColor(theme.Text)
-				ui.Text(c, "不保存会丢失这次编辑。").FontSize(11).TextColor(theme.Muted)
-				ui.Box(c).Height(6)
-				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-					if ui.Button(c, "取消").Clicked() {
-						a.CloseDoc = nil
-						a.ClosePrompt = false
-					}
-					if ui.Button(c, "不保存").Clicked() {
-						a.ClosePrompt = false
-						a.discardClose()
-					}
-					if ui.Button(c, "保存").Clicked() {
-						a.ClosePrompt = false
-						a.saveClose()
-					}
-				})
-			})
+	appDialog(c, &a.ClosePrompt, func() {
+		ui.Text(c, "是否保存对 "+d.Name()+" 的更改？").FontSize(14).Bold().TextColor(theme.Text)
+		ui.Text(c, "不保存会丢失这次编辑。").FontSize(11).TextColor(theme.Muted)
+		ui.Box(c).Height(6)
+		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			if ui.Button(c, "取消").Clicked() {
+				a.CloseDoc = nil
+				a.ClosePrompt = false
+			}
+			if ui.Button(c, "不保存").Clicked() {
+				a.ClosePrompt = false
+				a.discardClose()
+			}
+			if ui.Button(c, "保存").Clicked() {
+				a.ClosePrompt = false
+				a.saveClose()
+			}
+		})
 	})
 }

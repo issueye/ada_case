@@ -1,11 +1,16 @@
 package app
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/egoist/mygo/ui"
+	"github.com/egoist/mygo/ui/editor"
+
+	"lightcode/internal/document"
 )
 
 // TestOutlineOfGoFile lists a Go file's declarations and follows an edit.
@@ -44,6 +49,82 @@ func TestOutlineRendersAndJumps(t *testing.T) {
 	}
 	if pos := a.Col().Current().State.CursorPos(); pos.Line != syms[0].Line-1 {
 		t.Errorf("cursor line = %d, want %d", pos.Line, syms[0].Line-1)
+	}
+}
+
+// bigFile writes a Go file with 40 functions, Fn00 to Fn39, for a list
+// longer than the outline shows at once.
+func bigFile(t *testing.T, dir string) string {
+	t.Helper()
+	var src strings.Builder
+	src.WriteString("package big\n\n")
+	for i := 0; i < 40; i++ {
+		fmt.Fprintf(&src, "func Fn%02d() {}\n\n", i)
+	}
+	path := filepath.Join(dir, "big.go")
+	if err := os.WriteFile(path, []byte(src.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return path
+}
+
+// caretToFn39 puts the caret of the editor on Fn39, the last function.
+func caretToFn39(e *document.Editor) {
+	line := 2 + 2*39
+	e.State.GoTo(editor.Pos{Line: line, Col: 0})
+	e.State.ScrollTo(line)
+}
+
+// TestOutlineGoesToTheUnitOfATab: a tab another file's list had scrolled
+// away shows again, the outline goes to the unit at its caret, rather
+// than staying where the last file left it.
+func TestOutlineGoesToTheUnitOfATab(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.resetColumns()
+	a.OpenFile(bigFile(t, dir))
+	tt := ui.NewTester(a.View, 1280, 820)
+	// The list starts at the top, as the caret does.
+	if r, ok := tt.Find("Fn00"); !ok || r.W == 0 {
+		t.Fatalf("the outline shows no Fn00: %+v", r)
+	}
+	e := a.Col().Current()
+	caretToFn39(e)
+	a.OpenFile(filepath.Join(dir, "pkg", "util.go"))
+	tt.Frame()
+	tt.ClickAt(340, 64) // the first tab, big.go
+	tt.Frame()
+	r, ok := tt.Find("Fn39")
+	if !ok || r.W == 0 {
+		t.Fatalf("the outline did not go to Fn39, the unit at the caret: %+v", r)
+	}
+	if r.Y < 0 || r.Y+r.H > 820 {
+		t.Fatalf("Fn39 is outside the window: %+v", r)
+	}
+	if top, ok := tt.Find("Fn00"); ok && top.W != 0 {
+		t.Errorf("the list still shows Fn00: it did not scroll")
+	}
+}
+
+// TestOutlineFollowsADoubleClickedTab: a second click on the tab the
+// editor shows asks the outline for the unit at the caret, where it may
+// have been scrolled away.
+func TestOutlineFollowsADoubleClickedTab(t *testing.T) {
+	a, dir := testWorkspace(t)
+	a.resetColumns()
+	a.OpenFile(bigFile(t, dir))
+	tt := ui.NewTester(a.View, 1280, 820)
+	e := a.Col().Current()
+	caretToFn39(e)
+	tt.Frame()
+	if r, ok := tt.Find("Fn39"); !ok || r.W != 0 {
+		t.Fatalf("the outline moved before the tab was clicked: %+v", r)
+	}
+	tt.ClickAt(340, 64)
+	tt.ClickAt(340, 64)
+	tt.Frame()
+	r, ok := tt.Find("Fn39")
+	if !ok || r.W == 0 {
+		t.Fatalf("a double click on the tab did not bring Fn39 into view: %+v", r)
 	}
 }
 

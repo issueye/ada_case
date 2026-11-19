@@ -319,6 +319,9 @@ token（深色）：`--bg #0f1216`、`--panel #14181e`、`--ac #5b9cff`、`--ai 
 | 2026-11-19 | UI 修正 | 侧栏图标补全：`NewFile` 原来只画了纸张右上角与加号，缩到 16px 像断开的残片，改为完整纸张 + 加号；`Refresh` 的弧线断开、箭头只剩一小段，改为完整圆箭头（资源管理器与 SCM 共用） | `go build/vet/test` 全绿；`_shots/*` 与 `testdata/shots/editor.png` 基线重新生成 |
 | 2026-11-19 | 终端多控制台 | 底部终端改为标签式：`+`（`Ctrl+Shift+``）新建、每个标签一个独立 shell（终端 1、2…）、标签单独关闭、关掉最后一个收起面板、新建或切标签后焦点进终端；`Ctrl+`` 开关与 `path:line:col` 链接保留，能力面板关掉终端时结束所有 shell | `go build/vet/test` 全绿；新增 `TestTerminalTabs`，`TestTerminalPaneFailure` 适配 |
 | 2026-11-19 | 代码区右键菜单 | 编辑器右键菜单不再交给系统：mygo 编辑器新增 `State.PopoverMenu` / `DiffState.PopoverMenu`，由 `ui.PopoverMenu` 在窗口内按主题绘制（剪切/复制/粘贴/全选/切换注释/选择/转换/折叠 与子菜单都保留）；应用声明中文语言（`locales/zh-Hans` + `SetLanguages`），编辑器在 `theme.Menu()`（11px、面板半径 6）下构建，字号行距与标签/资源管理器菜单一致 | lightcode `go build/vet/test` 全绿；mygo `ui` 与 `ui/editor` 测试全绿；新增 `TestEditorContextMenu`、mygo `TestPopoverContextMenu`；截图 `_shots/lightcode-ui-editor-menu.png` |
+| 2026-11-19 | 大纲跟随标签 | 切到另一个文件的标签（或双击当前标签）时，左侧大纲滚到光标所在的单元，而不是停在切换前的位置：`outline` 记下上次显示的文件，切换时对当前条目调一次 `ScrollIntoView` | `go build/vet/test` 全绿；新增 `TestOutlineGoesToTheUnitOfATab`、`TestOutlineFollowsADoubleClickedTab` |
+| 2026-11-19 | 差异浮窗 | 源代码管理的差异不再替换编辑器页，改为浮窗：`DialogBase` 居中面板（宽 = 窗口−120、高 = 窗口−120），头部保留路径 / 未暂存标记 / 块数 / 暂存全部 / 刷新并新增关闭按钮，Esc 与点面板外都关闭，编辑器保持原文件。同时给 `testGitWorkspace` 补上 `LIGHTCODE_SETTINGS`，截图不再跟随开发者本机主题（SCM 与差异两张图随之统一为深色） | `go build/vet/test` 全绿；新增 `TestDiffFloats`；截图 `_shots/lightcode-ui-diff.png`、`_shots/lightcode-ui-scm.png` 重新生成 |
+| 2026-11-19 | 弹窗背景统一 | 文件操作 / 关闭确认 / 丢弃更改三个弹窗从 `ui.Modal` 换成 `ui.DialogBase` + 新的 `appDialog`：不再「主题弹层外面再套一层应用面板」（浅色下多出一圈白底与重投影），只留单层 `theme.Panel` 面板 + 1px 边框 + 半径 8 + 同款阴影，和命令面板、差异浮窗一致 | `go build/vet/test` 全绿；`TestFileOperations`、`TestCloseDirtyAsksToSave`、丢弃更改等既有用例通过 |
 | 2026-11-17 | M1 准备 | 会话恢复、外部改动、预览标签、分屏、缩放、编码、IME、截图基线 | 下一轮按 §2.2 顺序做，先 M1-1/M1-2（状态与文件一致性最影响可信度） |
 
 

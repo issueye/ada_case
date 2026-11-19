@@ -202,35 +202,30 @@ func (a *App) fileOpOverlay(c *ui.Context) {
 		return
 	}
 	op := &a.FileOp
-	ui.Modal(c, &op.Open, func() {
-		ui.Column(c).Width(420).Gap(10).Padding(18).Radius(8).
-			Background(theme.Panel).Border(1, theme.Border).
-			Shadow(0, 14, 36, 0, ui.RGBA(0, 0, 0, 0.55)).
-			Children(func() {
-				ui.Text(c, fileOpTitle(*op)).FontSize(14).Bold().TextColor(theme.Text)
-				if op.Kind == opDelete {
-					ui.Text(c, "删除 "+op.Name+"？文件夹会连同其中的文件一起删除，此操作不可撤销。").
-						FontSize(11).TextColor(theme.Muted).LineHeight(1.5)
-				} else {
-					ui.Text(c, filepath.ToSlash(op.Dir)).FontSize(10).TextColor(theme.Faint).SingleLine()
-					input := ui.TextInput(c, &op.Name).Placeholder("名称").FontSize(13).AutoFocus()
-					if input.Submitted() {
-						a.fileOpConfirm()
-					}
-				}
-				if op.Error != "" {
-					ui.Text(c, op.Error).FontSize(10).TextColor(theme.Danger).SingleLine()
-				}
-				ui.Box(c).Height(4)
-				ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-					if ui.Button(c, "取消").Clicked() {
-						a.FileOp = fileOp{}
-					}
-					if ui.Button(c, fileOpButton(*op)).Clicked() {
-						a.fileOpConfirm()
-					}
-				})
-			})
+	appDialog(c, &op.Open, func() {
+		ui.Text(c, fileOpTitle(*op)).FontSize(14).Bold().TextColor(theme.Text)
+		if op.Kind == opDelete {
+			ui.Text(c, "删除 "+op.Name+"？文件夹会连同其中的文件一起删除，此操作不可撤销。").
+				FontSize(11).TextColor(theme.Muted).LineHeight(1.5)
+		} else {
+			ui.Text(c, filepath.ToSlash(op.Dir)).FontSize(10).TextColor(theme.Faint).SingleLine()
+			input := ui.TextInput(c, &op.Name).Placeholder("名称").FontSize(13).AutoFocus()
+			if input.Submitted() {
+				a.fileOpConfirm()
+			}
+		}
+		if op.Error != "" {
+			ui.Text(c, op.Error).FontSize(10).TextColor(theme.Danger).SingleLine()
+		}
+		ui.Box(c).Height(4)
+		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			if ui.Button(c, "取消").Clicked() {
+				a.FileOp = fileOp{}
+			}
+			if ui.Button(c, fileOpButton(*op)).Clicked() {
+				a.fileOpConfirm()
+			}
+		})
 	})
 }
 

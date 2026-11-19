@@ -68,49 +68,65 @@ func (a *App) openDiff(path string, staged bool) {
 	a.Diff = &diffTab{Path: path, Staged: staged, Old: oldBuf, New: newBuf, State: state, Hunks: fp.Hunks}
 }
 
-// diffView draws the diff page in place of the active column's editor.
-func (a *App) diffView(c *ui.Context) {
+// diffOverlay shows the diff of a file in a floating window over the
+// window, so the editor keeps what it shows: the file's path, its hunks,
+// and the diff of the index against the working tree, or of HEAD against
+// the index when staged.
+func (a *App) diffOverlay(c *ui.Context) {
 	d := a.Diff
-	ui.Column(c).Grow(1).Background(theme.Background).Children(func() {
-		ui.Row(c).Height(36).PaddingX(8).Gap(8).AlignItems(ui.Center).
-			Background(theme.Panel).BorderWidth(0, 0, 1, 0).BorderColor(theme.BorderSoft).
-			Children(func() {
-				iconButton(c, icons.ArrowLeft, "关闭差异", 22, func() { a.Diff = nil })
-				ui.Icon(c, fileIcon(d.Path)).FontSize(14).TextColor(fileColor(d.Path))
-				ui.Text(c, d.Path).FontSize(12).TextColor(theme.Text).SingleLine()
-				label := "未暂存"
-				if d.Staged {
-					label = "已暂存"
-				}
-				ui.Text(c, label).FontSize(9).Padding(1, 5).Radius(3).
-					Background(theme.AccentSoft).TextColor(theme.Accent)
-				ui.Text(c, itoa(len(d.Hunks))+" 个块").FontSize(9).TextColor(theme.Faint)
-				ui.Box(c).Grow(1)
-				if !d.Staged {
-					if ui.Button(c, "暂存全部").Clicked() {
-						a.stageFile(d.Path)
-						a.openDiff(d.Path, false)
+	if d == nil {
+		return
+	}
+	open := true
+	ui.DialogBase(c, &open, func(backdrop, panel ui.Element) {
+		backdrop.Background(ui.RGBA(0, 0, 0, 0.36))
+		w, h := max(620, a.viewW-120), max(380, a.viewH-120)
+		panel.Width(w).Height(h).Clip().Radius(10).Background(theme.Panel).
+			Border(1, theme.Border).Shadow(0, 18, 48, 0, ui.RGBA(0, 0, 0, 0.55))
+		panel.Children(func() {
+			ui.Row(c).Height(44).PaddingX(10).Gap(8).AlignItems(ui.Center).
+				Background(theme.PanelDeep).BorderWidth(0, 0, 1, 0).BorderColor(theme.BorderSoft).
+				Children(func() {
+					ui.Icon(c, fileIcon(d.Path)).FontSize(14).TextColor(fileColor(d.Path))
+					ui.Text(c, d.Path).FontSize(12).TextColor(theme.Text).SingleLine()
+					label := "未暂存"
+					if d.Staged {
+						label = "已暂存"
 					}
-				} else {
-					if ui.Button(c, "取消暂存").Clicked() {
-						a.unstageFile(d.Path)
-						a.Diff = nil
+					ui.Text(c, label).FontSize(9).Padding(1, 5).Radius(3).
+						Background(theme.AccentSoft).TextColor(theme.Accent)
+					ui.Text(c, itoa(len(d.Hunks))+" 个块").FontSize(9).TextColor(theme.Faint)
+					ui.Box(c).Grow(1)
+					if !d.Staged {
+						if ui.Button(c, "暂存全部").Clicked() {
+							a.stageFile(d.Path)
+							a.openDiff(d.Path, false)
+						}
+					} else {
+						if ui.Button(c, "取消暂存").Clicked() {
+							a.unstageFile(d.Path)
+							a.Diff = nil
+						}
 					}
-				}
-				iconButton(c, icons.Refresh, "刷新差异", 22, func() { a.openDiff(d.Path, d.Staged) })
+					iconButton(c, icons.Refresh, "刷新差异", 22, func() { a.openDiff(d.Path, d.Staged) })
+					iconButton(c, icons.Close, "关闭差异", 22, func() { a.Diff = nil })
+				})
+			if d.Err != "" {
+				ui.Text(c, d.Err).FontSize(11).TextColor(theme.Danger).Padding(8, 12)
+			}
+			if !d.Staged && len(d.Hunks) > 0 {
+				a.diffHunkBar(c, d)
+			}
+			// As the code area, the diff's sides build in the app menus'
+			// metrics, so their context menus read like the app's.
+			ui.Themed(c, theme.Menu()).Grow(1).FillWidth().Children(func() {
+				editor.DiffView(c, d.State).Grow(1).FillWidth()
 			})
-		if d.Err != "" {
-			ui.Text(c, d.Err).FontSize(11).TextColor(theme.Danger).Padding(8, 12)
-		}
-		if !d.Staged && len(d.Hunks) > 0 {
-			a.diffHunkBar(c, d)
-		}
-		// As the code area, the diff's sides build in the app menus'
-		// metrics, so their context menus read like the app's.
-		ui.Themed(c, theme.Menu()).Grow(1).FillWidth().Children(func() {
-			editor.DiffView(c, d.State).Grow(1).FillWidth()
 		})
 	})
+	if !open {
+		a.Diff = nil
+	}
 }
 
 // diffHunkBar is the row of hunks above the diff: each can be staged on

@@ -37,6 +37,7 @@ func (a *App) View(c *ui.Context) {
 		})
 		a.statusBar(c)
 	})
+	a.diffOverlay(c)
 	a.paletteOverlay(c)
 	a.closeConfirmOverlay(c)
 	a.fileOpOverlay(c)
@@ -87,10 +88,6 @@ func (a *App) columnView(c *ui.Context, idx int) {
 		a.breadcrumbs(c, col)
 		ui.Box(c).Height(1).Background(theme.BorderSoft)
 		ui.Column(c).Grow(1).Background(theme.Background).Children(func() {
-			if a.Diff != nil && idx == a.ActiveCol {
-				a.diffView(c)
-				return
-			}
 			if e := col.Current(); e != nil {
 				if e.Doc.IsPicture() {
 					a.pictureView(c, e.Doc)

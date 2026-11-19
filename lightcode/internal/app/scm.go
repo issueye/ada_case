@@ -341,22 +341,18 @@ func (a *App) discardOverlay(c *ui.Context) {
 		return
 	}
 	path := a.DiscardPath
-	ui.Modal(c, &a.DiscardOpen, func() {
-		ui.Column(c).Width(420).Gap(10).Padding(18).Radius(8).
-			Background(theme.Panel).Border(1, theme.Border).
-			Shadow(0, 14, 36, 0, ui.RGBA(0, 0, 0, 0.55)).Children(func() {
-			ui.Text(c, "丢弃 "+path+" 的更改？").FontSize(14).Bold().TextColor(theme.Text)
-			ui.Text(c, "工作区会回到上次提交的样子，不能撤销。").FontSize(11).TextColor(theme.Muted)
-			ui.Box(c).Height(4)
-			ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
-				if ui.Button(c, "取消").Clicked() {
-					a.DiscardPath = ""
-					a.DiscardOpen = false
-				}
-				if ui.Button(c, "丢弃").Clicked() {
-					a.confirmDiscard()
-				}
-			})
+	appDialog(c, &a.DiscardOpen, func() {
+		ui.Text(c, "丢弃 "+path+" 的更改？").FontSize(14).Bold().TextColor(theme.Text)
+		ui.Text(c, "工作区会回到上次提交的样子，不能撤销。").FontSize(11).TextColor(theme.Muted)
+		ui.Box(c).Height(4)
+		ui.Row(c).Gap(8).Justify(ui.End).Children(func() {
+			if ui.Button(c, "取消").Clicked() {
+				a.DiscardPath = ""
+				a.DiscardOpen = false
+			}
+			if ui.Button(c, "丢弃").Clicked() {
+				a.confirmDiscard()
+			}
 		})
 	})
 }

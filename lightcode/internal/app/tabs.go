@@ -84,6 +84,11 @@ func (a *App) tab(c *ui.Context, idx, i int, e *document.Editor, chosen bool) {
 		a.ActiveCol = idx
 		a.Cols[idx].Active = i
 	})
+	if tab.DoubleClicked() {
+		// Its second click asks the outline to go to the unit at the
+		// caret.
+		a.outline.reveal = true
+	}
 	if tab.RightClicked() {
 		a.tabMenu = tabMenuState{open: true, idx: idx, doc: e.Doc}
 	}
