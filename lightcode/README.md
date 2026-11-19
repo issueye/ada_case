@@ -38,6 +38,8 @@ go run ./cmd/lightcode <folder> [file]
 - 文件操作：新建文件/文件夹、重命名、删除（确认、脏文件先拦）、右键菜单，操作后刷新树与索引。
 - Git：SCM 面板显示暂存/更改/未跟踪/冲突四组与当前分支（ahead/behind）、提交框、最近 20 条提交；文件点开是并排 diff 页，按块卡片可**逐 hunk 暂存**（`git diff` → `editor.ParsePatch` → 单块应用到索引文本 → `hash-object` + `update-index`，不拼 patch），另可暂存/取消暂存整文件、丢弃（二次确认）。状态在后台刷新，不阻塞窗口。
 - 编码：UTF-8、UTF-8 BOM、GBK 自动识别并原样写回；二进制文件拒绝打开。
+- 图片预览：`PNG` / `JPEG` / `GIF` / `WebP` / `BMP` / `SVG` 以只读预览标签打开，按窗口缩放并显示格式与尺寸；SVG 无法绘制时按源码文本打开。
+- Markdown：`.md` / `.markdown` / `.mdown` / `.mkd` / `.mdx` 可切换「源码 / 文档视图」——`Ctrl+Shift+V`、视图菜单或面包屑右侧的按钮；文档视图用 `ui/markdown` 渲染，可滚动、可选中复制，主题跟随明暗切换。
 - 编辑：`ui/editor` 的语法高亮、多光标、折叠、查找替换、跳转到行、Git 改动条（未接 Git 时为空白）。
 - 快速打开 `Ctrl+P` 与命令面板 `Ctrl+Shift+P`（模糊匹配、↑↓ 选择、Enter 执行）。
 - 视图：`Ctrl+B` 侧栏；`Ctrl+Shift+E/F/G/X` 切换侧栏视图；`Ctrl+=` / `Ctrl+-` / `Ctrl+0` 缩放；`Ctrl+\` 拆分/关闭分屏（`ui.SplitPercent`，拖动分隔条；两列共享同一 Document 的 undo）。
@@ -82,8 +84,8 @@ internal/proc          # 子进程的启动方式：GUI 下隐藏 git/rg 的控�
 go build ./... && go vet ./... && go test ./...
 ```
 
-- 单元：`document`（保存/CRLF/二进制/GBK/BOM/外部改动）、`settings`（默认值/损坏文件/钳制）、`workspace`（排序/懒加载/ignore/模糊/索引）、`command`（键位/注册表）、`search`（大小写/正则/上限/取消/二进制/忽略/rg 解析）、`symbols`（Go/Markdown/回退）、`git`（status 解析/暂存/提交/log）、`proc`（子进程隐藏控制台）。
-- 交互（`ui.NewTester`）：快速打开、保存脏文件、脏关闭确认、侧栏切换、会话恢复、缩放、预览标签、外部改动横条、分屏共享 undo/键位/会话、搜索与跳转、大纲渲染/跳转、文件新建/改名/删除、watcher 刷新树、中文输入、SCM 面板、diff 页与逐块暂存、提交与历史、终端错误页与 `path:line:col` 链接、设置页与 settings.json、能力面板开关、明暗主题切换。
+- 单元：`document`（保存/CRLF/二进制/GBK/BOM/外部改动/图片预览）、`settings`（默认值/损坏文件/钳制）、`workspace`（排序/懒加载/ignore/模糊/索引）、`command`（键位/注册表）、`search`（大小写/正则/上限/取消/二进制/忽略/rg 解析）、`symbols`（Go/Markdown/回退）、`git`（status 解析/暂存/提交/log）、`proc`（子进程隐藏控制台）。
+- 交互（`ui.NewTester`）：快速打开、保存脏文件、脏关闭确认、侧栏切换、会话恢复、缩放、预览标签、外部改动横条、分屏共享 undo/键位/会话、搜索与跳转、大纲渲染/跳转、文件新建/改名/删除、watcher 刷新树、中文输入、SCM 面板、diff 页与逐块暂存、提交与历史、图片预览、Markdown 文档视图、终端错误页与 `path:line:col` 链接、设置页与 settings.json、能力面板开关、明暗主题切换。
 - 预算：`internal/app/budget_test.go`（2,000 行文件 20 帧，断言 < 8 ms，实测 0.29 ms）；30k 基准见 `workspace/index_bench_test.go` 与 `search/bench_test.go`（`LIGHTCODE_BENCH=1`）。
 - 截图：`internal/app/screenshot_test.go` 输出 `_shots/lightcode-ui-*.png`（`LIGHTCODE_UPDATE_SHOTS=1` 才写）；`baseline_test.go` 与 `testdata/shots/editor.png` 比像素（1%），`LIGHTCODE_UPDATE_BASELINE=1` 可重生成基线。
 

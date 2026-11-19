@@ -92,11 +92,19 @@ func (a *App) columnView(c *ui.Context, idx int) {
 				return
 			}
 			if e := col.Current(); e != nil {
-				if e.Doc.ExternalChanged() {
-					a.externalBanner(c, e.Doc)
+				if e.Doc.IsPicture() {
+					a.pictureView(c, e.Doc)
+				} else {
+					if e.Doc.ExternalChanged() {
+						a.externalBanner(c, e.Doc)
+					}
+					if e.MarkdownView {
+						a.markdownView(c, e)
+					} else {
+						e.State.OnInput = a.RunKey
+						editorView(c, e)
+					}
 				}
-				e.State.OnInput = a.RunKey
-				editorView(c, e)
 			} else {
 				a.emptyColumn(c, col)
 			}

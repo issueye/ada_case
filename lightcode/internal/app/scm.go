@@ -208,25 +208,14 @@ func (a *App) scmEntryRow(c *ui.Context, e git.Entry, kind string) {
 		row.Background(theme.Hover)
 	}
 	row.OnClick(func() { a.openDiff(e.Path, kind == "staged") })
-	row.ContextMenu(func(m *ui.Menu) {
-		if kind == "untracked" || kind == "changes" {
-			if m.Item("暂存").Chosen() {
-				a.stageFile(e.Path)
-			}
-		}
-		if kind == "staged" {
-			if m.Item("取消暂存").Chosen() {
-				a.unstageFile(e.Path)
-			}
-		}
-		m.Separator()
-		if m.Item("丢弃更改").Chosen() {
-			a.discardFile(e.Path, kind)
-		}
-		if m.Item("在编辑器中打开").Chosen() {
-			a.OpenFile(filepath.Join(a.WS.Root, filepath.FromSlash(e.Path)))
-		}
-	})
+	if row.RightClicked() {
+		a.rowMenu = rowMenu{open: true, kind: menuSCM, path: e.Path, scmKind: kind}
+	}
+	if a.rowMenu.open && a.rowMenu.kind == menuSCM && a.rowMenu.path == e.Path && a.rowMenu.scmKind == kind {
+		ui.Popover(c, row, &a.rowMenu.open, func() {
+			a.menuBody(c, a.scmMenuItems(e, kind), func() { a.rowMenu.open = false })
+		})
+	}
 }
 
 func statusColor(kind string) ui.Color {
@@ -240,6 +229,24 @@ func statusColor(kind string) ui.Color {
 	default:
 		return theme.Warning
 	}
+}
+
+// scmMenuItems is the SCM row's menu, drawn by the app like the others.
+func (a *App) scmMenuItems(e git.Entry, kind string) []menuItem {
+	var items []menuItem
+	switch kind {
+	case "staged":
+		items = append(items, menuItem{label: "取消暂存", run: func() { a.unstageFile(e.Path) }})
+	case "untracked", "changes":
+		items = append(items, menuItem{label: "暂存", run: func() { a.stageFile(e.Path) }})
+	}
+	return append(items,
+		menuItem{sep: true},
+		menuItem{label: "丢弃更改", run: func() { a.discardFile(e.Path, kind) }},
+		menuItem{label: "在编辑器中打开", run: func() {
+			a.OpenFile(filepath.Join(a.WS.Root, filepath.FromSlash(e.Path)))
+		}},
+	)
 }
 
 // scmCommitBox is the message field and the commit button.

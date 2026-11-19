@@ -155,6 +155,23 @@ func (a *App) breadcrumbs(c *ui.Context, col *document.Column) {
 			}
 			ui.Text(c, part).FontSize(11).TextColor(color).SingleLine()
 		}
+		if e := col.Current(); e != nil && isMarkdown(doc.Path) {
+			// Markdown files switch between source and rendered document.
+			ui.Box(c).Grow(1)
+			label := "预览"
+			if e.MarkdownView {
+				label = "源码"
+			}
+			btn := ui.Row(c).Height(20).Padding(0, 8).Radius(3).AlignItems(ui.Center).
+				Cursor(ui.CursorPointer).Tooltip("Markdown 文档视图（Ctrl+Shift+V）")
+			btn.Children(func() {
+				ui.Text(c, label).FontSize(10).TextColor(theme.Muted)
+			})
+			if btn.Hovered() {
+				btn.Background(theme.Hover)
+			}
+			btn.OnClick(func() { a.toggleMarkdownView(e) })
+		}
 	})
 }
 
@@ -227,38 +244,17 @@ type tabMenuState struct {
 // tabMenuBody draws the tab's menu in the app's own style, in a popover
 // under the tab, rather than the system's white menu.
 func (a *App) tabMenuBody(c *ui.Context, idx int, d *document.Document) {
-	ui.Column(c).Width(216).PaddingY(4).Radius(6).Background(theme.Panel).
-		Border(1, theme.Border).Shadow(0, 8, 24, 0, ui.RGBA(0, 0, 0, 0.45)).
-		Children(func() {
-			item := func(label, hint string, run func()) {
-				row := ui.Row(c).Height(28).PaddingX(10).Gap(8).AlignItems(ui.Center).
-					Cursor(ui.CursorPointer)
-				row.Children(func() {
-					ui.Text(c, label).FontSize(11).TextColor(theme.Text).Grow(1).SingleLine()
-					if hint != "" {
-						ui.Text(c, hint).FontSize(9).TextColor(theme.Faint)
-					}
-				})
-				if row.Hovered() {
-					row.Background(theme.Hover)
-				}
-				row.OnClick(func() {
-					a.tabMenu.open = false
-					run()
-				})
-			}
-			item("关闭", "Ctrl+W", func() { a.closeTabIn(idx, d) })
-			item("关闭其他", "", func() { a.closeOthersIn(idx, d) })
-			item("关闭已保存", "", func() { a.closeSavedIn(idx) })
-			ui.Box(c).Height(1).Background(theme.BorderSoft)
-			item("复制路径", "", func() {
-				mygo.Clipboard.WriteText(d.Path)
-				a.say("已复制路径 " + d.Path)
-			})
-			item("在文件管理器中显示", "", func() {
-				mygo.Shell.ShowItemInFolder(d.Path)
-			})
-		})
+	a.menuBody(c, []menuItem{
+		{label: "关闭", hint: "Ctrl+W", run: func() { a.closeTabIn(idx, d) }},
+		{label: "关闭其他", run: func() { a.closeOthersIn(idx, d) }},
+		{label: "关闭已保存", run: func() { a.closeSavedIn(idx) }},
+		{sep: true},
+		{label: "复制路径", run: func() {
+			mygo.Clipboard.WriteText(d.Path)
+			a.say("已复制路径 " + d.Path)
+		}},
+		{label: "在文件管理器中显示", run: func() { mygo.Shell.ShowItemInFolder(d.Path) }},
+	}, func() { a.tabMenu.open = false })
 }
 
 // closeOthersIn closes the clean tabs of a column except d.

@@ -95,6 +95,8 @@ type App struct {
 	viewW, viewH float32
 	// tabMenu is the tab menu a right click opened.
 	tabMenu tabMenuState
+	// rowMenu is the explorer or SCM row menu a right click opened.
+	rowMenu rowMenu
 	// Prefs are the app's preferences, from settings.json.
 	Prefs preferences
 	// Capability toggles in the extensions view.
@@ -202,6 +204,7 @@ func (a *App) registerCommands() {
 	add("view.zoomOut", "缩小", "视图", "CmdOrCtrl+-", func() { a.SetZoom(a.Zoom - 0.1) })
 	add("view.zoomReset", "重置缩放", "视图", "CmdOrCtrl+0", func() { a.SetZoom(1) })
 	add("view.split", "拆分 / 关闭编辑器", "视图", "CmdOrCtrl+\\", a.ToggleSplit)
+	add("view.markdown", "Markdown 文档视图", "视图", "CmdOrCtrl+Shift+V", a.ToggleMarkdownPreview)
 	add("terminal.toggle", "终端", "视图", "CmdOrCtrl+`", a.toggleTerminal)
 	add("view.settings", "设置", "文件", "", func() { a.SettingsOpen = true })
 	add("view.toggleTheme", "切换明暗主题", "视图", "CmdOrCtrl+Shift+T", a.ToggleTheme)
@@ -386,6 +389,10 @@ func (a *App) SaveActive() {
 	e := a.Col().Current()
 	if e == nil {
 		a.say("没有打开的文件")
+		return
+	}
+	if e.Doc.IsPicture() {
+		a.say(e.Doc.Name() + " 是图片预览，不能编辑")
 		return
 	}
 	if e.Doc.ReadOnly() {

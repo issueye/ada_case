@@ -144,9 +144,14 @@ func (a *App) treeRow(c *ui.Context, e *workspace.Entry, depth int) {
 	} else if row.Hovered() {
 		row.Background(theme.Hover)
 	}
-	row.ContextMenu(func(m *ui.Menu) {
-		a.fileOpMenuItems(m, e)
-	})
+	if row.RightClicked() {
+		a.rowMenu = rowMenu{open: true, kind: menuExplorer, path: e.Path, isDir: e.IsDir}
+	}
+	if a.rowMenu.open && a.rowMenu.kind == menuExplorer && a.rowMenu.path == e.Path {
+		ui.Popover(c, row, &a.rowMenu.open, func() {
+			a.menuBody(c, a.fileOpMenuItems(e), func() { a.rowMenu.open = false })
+		})
+	}
 	row.OnClick(func() {
 		a.Selected = e.Path
 		if e.IsDir {

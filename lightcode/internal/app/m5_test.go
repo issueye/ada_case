@@ -49,7 +49,7 @@ func TestCapabilitiesPanel(t *testing.T) {
 	a, _ := testWorkspace(t)
 	a.ShowSidebar(4)
 	tt := ui.NewTester(a.View, 1280, 820)
-	for _, want := range []string{"能力", "源代码管理", "终端", "ui/markdown"} {
+	for _, want := range []string{"能力", "源代码管理", "终端", "Markdown"} {
 		if !tt.HasText(want) {
 			t.Fatalf("capabilities misses %q; texts %q", want, tt.Texts())
 		}
@@ -160,5 +160,54 @@ func TestTabContextMenu(t *testing.T) {
 		if !tt.HasText(want) {
 			t.Errorf("themed tab menu misses %q; texts %q", want, tt.Texts())
 		}
+	}
+}
+
+// TestExplorerContextMenu right-clicks a tree row and finds the app's own
+// menu, the same one the tab draws, rather than the system's white one.
+func TestExplorerContextMenu(t *testing.T) {
+	a, _ := testWorkspace(t)
+	tt := ui.NewTester(a.View, 1280, 820)
+	r, ok := tt.Find("main.go")
+	if !ok {
+		t.Fatalf("no main.go row; texts %q", tt.Texts())
+	}
+	tt.RightClickAt(r.X+20, r.Y+r.H/2)
+	tt.Frame()
+	for _, want := range []string{"新建文件", "新建文件夹", "重命名", "删除", "在文件管理器中显示"} {
+		if !tt.HasText(want) {
+			t.Errorf("the explorer menu misses %q; texts %q", want, tt.Texts())
+		}
+	}
+	if err := tt.Click("新建文件夹"); err != nil {
+		t.Fatal(err)
+	}
+	if !a.FileOp.Open || a.FileOp.Kind != opNewFolder {
+		t.Errorf("clicking 新建文件夹 opened %v, kind %v", a.FileOp.Open, a.FileOp.Kind)
+	}
+}
+
+// TestSCMContextMenu right-clicks an SCM row: the menu is the app's own
+// too, with the actions of its group.
+func TestSCMContextMenu(t *testing.T) {
+	a, _ := testGitWorkspace(t)
+	a.ShowSidebar(2)
+	tt := ui.NewTester(a.View, 1280, 820)
+	r, ok := tt.Find("main.go")
+	if !ok {
+		t.Fatalf("no main.go row; texts %q", tt.Texts())
+	}
+	tt.RightClickAt(r.X+20, r.Y+r.H/2)
+	tt.Frame()
+	for _, want := range []string{"暂存", "丢弃更改", "在编辑器中打开"} {
+		if !tt.HasText(want) {
+			t.Errorf("the SCM menu misses %q; texts %q", want, tt.Texts())
+		}
+	}
+	if err := tt.Click("在编辑器中打开"); err != nil {
+		t.Fatal(err)
+	}
+	if got := a.Col().Current(); got == nil || got.Doc.Name() != "main.go" {
+		t.Errorf("the SCM menu did not open main.go")
 	}
 }

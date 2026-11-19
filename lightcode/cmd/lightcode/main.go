@@ -110,6 +110,7 @@ func newMenu(a *app.App) *mygo.Menu {
 		mygo.Separator(),
 		{Label: "切换侧栏", Accelerator: "CmdOrCtrl+B", Click: run("view.toggleSidebar")},
 		{Label: "拆分 / 关闭编辑器", Accelerator: "CmdOrCtrl+\\", Click: run("view.split")},
+		{Label: "Markdown 预览 / 源码", Accelerator: "CmdOrCtrl+Shift+V", Click: run("view.markdown")},
 		{Label: "终端", Accelerator: "CmdOrCtrl+`", Click: run("terminal.toggle")},
 		{Label: "设置", Click: run("view.settings")},
 		mygo.Separator(),

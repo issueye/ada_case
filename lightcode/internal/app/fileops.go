@@ -241,27 +241,20 @@ func fileOpButton(op fileOp) string {
 	return "确定"
 }
 
-// fileOpMenuItems adds the file operations to an explorer row's menu.
-func (a *App) fileOpMenuItems(m *ui.Menu, e *workspace.Entry) {
+// fileOpMenuItems is the explorer row's menu: the file operations, in the
+// app's own style.
+func (a *App) fileOpMenuItems(e *workspace.Entry) []menuItem {
 	dir := e.Path
 	if !e.IsDir {
 		dir = filepath.Dir(e.Path)
 	}
-	if m.Item("新建文件").Shortcut(0, ui.KeyN).Chosen() {
-		a.BeginNewFile(dir)
-	}
-	if m.Item("新建文件夹").Chosen() {
-		a.BeginNewFolder(dir)
-	}
-	m.Separator()
-	if m.Item("重命名").Shortcut(0, ui.KeyF2).Chosen() {
-		a.BeginRename(e.Path)
-	}
-	if m.Item("删除").Chosen() {
-		a.BeginDelete(e.Path)
-	}
-	m.Separator()
-	if m.Item("在文件管理器中显示").Chosen() {
-		mygo.Shell.ShowItemInFolder(e.Path)
+	return []menuItem{
+		{label: "新建文件", hint: "N", run: func() { a.BeginNewFile(dir) }},
+		{label: "新建文件夹", run: func() { a.BeginNewFolder(dir) }},
+		{sep: true},
+		{label: "重命名", hint: "F2", run: func() { a.BeginRename(e.Path) }},
+		{label: "删除", run: func() { a.BeginDelete(e.Path) }},
+		{sep: true},
+		{label: "在文件管理器中显示", run: func() { mygo.Shell.ShowItemInFolder(e.Path) }},
 	}
 }

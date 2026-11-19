@@ -8,6 +8,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/egoist/mygo/ui"
 	"github.com/egoist/mygo/ui/editor"
 	"golang.org/x/text/encoding/simplifiedchinese"
 )
@@ -36,6 +37,10 @@ type Document struct {
 	// changes against.
 	Base *editor.Buffer
 
+	// picture is the decoded image of an image file, which the editor
+	// shows as a preview instead of its text.
+	picture *picture
+
 	encoding string
 	modTime  time.Time
 	size     int64
@@ -44,7 +49,8 @@ type Document struct {
 	external bool
 }
 
-// Open reads path into a Document.
+// Open reads path into a Document: text as text, and an image as a picture
+// preview.
 func Open(path string) (*Document, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -53,6 +59,19 @@ func Open(path string) (*Document, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
+	}
+	if pic, _, err := openPicture(path, data); err != nil {
+		return nil, err
+	} else if pic != nil {
+		d := &Document{
+			Path:     path,
+			picture:  pic,
+			modTime:  info.ModTime(),
+			size:     info.Size(),
+			readOnly: true,
+		}
+		d.set("")
+		return d, nil
 	}
 	text, enc, err := decode(data)
 	if err != nil {
@@ -117,16 +136,60 @@ func (d *Document) Name() string { return filepath.Base(d.Path) }
 func (d *Document) Dir() string { return filepath.Dir(d.Path) }
 
 // Dirty reports unsaved changes.
-func (d *Document) Dirty() bool { return d.Buffer.Modified() }
+func (d *Document) Dirty() bool {
+	if d.picture != nil {
+		return false
+	}
+	return d.Buffer.Modified()
+}
 
 // ReadOnly reports whether the file denies writing.
 func (d *Document) ReadOnly() bool { return d.readOnly }
 
-// Encoding is the file's encoding, as "UTF-8", "UTF-8 BOM" or "GBK".
-func (d *Document) Encoding() string { return d.encoding }
+// IsPicture reports whether the file is an image, which the editor shows
+// as a preview and never edits.
+func (d *Document) IsPicture() bool { return d.picture != nil }
 
-// Language is the name of the editor's language, as "Go".
+// Picture is the decoded image of a picture, nil for other files.
+func (d *Document) Picture() ui.ImageSource {
+	if d.picture == nil {
+		return nil
+	}
+	return d.picture.src
+}
+
+// PictureFormat is the image's format, as "PNG" or "SVG", "" for other
+// files.
+func (d *Document) PictureFormat() string {
+	if d.picture == nil {
+		return ""
+	}
+	return d.picture.format
+}
+
+// PictureSize is the image's size in pixels, 0×0 when it does not say.
+func (d *Document) PictureSize() (w, h float32) {
+	if d.picture == nil {
+		return 0, 0
+	}
+	return ui.ImageSize(d.picture.src)
+}
+
+// Encoding is the file's encoding, as "UTF-8", "UTF-8 BOM" or "GBK"; for a
+// picture, its format.
+func (d *Document) Encoding() string {
+	if d.picture != nil {
+		return d.picture.format
+	}
+	return d.encoding
+}
+
+// Language is the name of the editor's language, as "Go"; a picture's is
+// "图片".
 func (d *Document) Language() string {
+	if d.picture != nil {
+		return "图片"
+	}
 	if l := d.Buffer.Language(); l != nil {
 		return l.Name
 	}
@@ -135,6 +198,9 @@ func (d *Document) Language() string {
 
 // LineEnding is "LF" or "CRLF".
 func (d *Document) LineEnding() string {
+	if d.picture != nil {
+		return ""
+	}
 	if d.Buffer.LineEnding() == "\r\n" {
 		return "CRLF"
 	}
@@ -142,8 +208,11 @@ func (d *Document) LineEnding() string {
 }
 
 // Save writes the buffer to disk and marks it saved, in the encoding the
-// file was read in.
+// file was read in. It refuses a picture, which is a preview.
 func (d *Document) Save() error {
+	if d.picture != nil {
+		return ErrPicture
+	}
 	var buf bytes.Buffer
 	if _, err := d.Buffer.WriteTo(&buf); err != nil {
 		return err
@@ -194,7 +263,8 @@ func (d *Document) ChangedOnDisk() bool {
 	return !info.ModTime().Equal(d.modTime) || info.Size() != d.size
 }
 
-// Reload replaces the buffer with the file's text, which loses changes.
+// Reload replaces the buffer with the file's text, or rereads its picture,
+// which loses changes.
 func (d *Document) Reload() error {
 	data, err := os.ReadFile(d.Path)
 	if err != nil {
@@ -204,10 +274,19 @@ func (d *Document) Reload() error {
 	if err != nil {
 		return err
 	}
+	if pic, _, err := openPicture(d.Path, data); err != nil {
+		return err
+	} else if pic != nil {
+		d.picture, d.encoding, d.external = pic, "", false
+		d.set("")
+		d.modTime, d.size = info.ModTime(), info.Size()
+		return nil
+	}
 	text, enc, err := decode(data)
 	if err != nil {
 		return err
 	}
+	d.picture = nil
 	d.encoding = enc
 	d.set(text)
 	d.modTime, d.size = info.ModTime(), info.Size()
